@@ -1,0 +1,1355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>CrushLite — Fantasy Arena</title>
+<style>
+:root{
+  --bg:#070b16; --ink:#ecf2ff; --muted:#aab7dd;
+  --good:#58ff9b; --bad:#ff5c7a; --warn:#ffd15c; --accent:#7aa8ff;
+  --shadow: 0 18px 50px rgba(0,0,0,.55);
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+body{margin:0;height:100vh;overflow:hidden;font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;color:var(--ink);
+  background:radial-gradient(900px 600px at 50% -10%, rgba(122,168,255,.20), rgba(0,0,0,0)),
+            radial-gradient(800px 500px at 20% 20%, rgba(88,255,155,.10), rgba(0,0,0,0)),
+            radial-gradient(800px 500px at 80% 20%, rgba(255,92,122,.10), rgba(0,0,0,0)),
+            linear-gradient(180deg,#0a1024,var(--bg));
+}
+.wrap{max-width:1020px;margin:0 auto;height:100vh;padding: env(safe-area-inset-top) 10px env(safe-area-inset-bottom) 10px;display:flex;flex-direction:column;gap:10px;}
+.topbar{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:stretch;}
+.panel{background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:10px 12px;box-shadow:var(--shadow);}
+.statgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
+.stat .k{font-size:11px;color:var(--muted)}
+.stat .v{font-weight:900;letter-spacing:.2px}
+.btn{user-select:none;cursor:pointer;border-radius:16px;padding:10px 14px;min-height:44px;display:flex;align-items:center;justify-content:center;font-weight:900;
+  background:linear-gradient(180deg,rgba(122,168,255,.30),rgba(122,168,255,.10));border:1px solid rgba(122,168,255,.38);box-shadow:var(--shadow);
+}
+.btn.secondary{background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.12);}
+.btn:active{transform:translateY(1px);}
+#canvas{width:100%;flex:1;min-height:46vh;border-radius:18px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.01));box-shadow:var(--shadow);}
+.handwrap{display:flex;flex-direction:column;gap:8px;}
+.hand{display:flex;gap:8px;}
+.card{flex:1;min-height:98px;border-radius:18px;padding:10px 10px 8px;border:1px solid rgba(255,255,255,.12);
+  background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.03));position:relative;overflow:hidden;}
+.card::before{content:"";position:absolute;inset:-40px -40px auto auto;width:120px;height:120px;background:radial-gradient(circle at 40% 40%,rgba(122,168,255,.22),rgba(0,0,0,0) 60%);transform:rotate(15deg);}
+.card.sel{outline:2px solid rgba(122,168,255,.95);box-shadow:0 0 0 4px rgba(122,168,255,.16),var(--shadow);transform:translateY(-1px);}
+.card.disabled{opacity:.55;}
+.card .row1{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;}
+.card .name{font-weight:950;font-size:13px;line-height:1.1}
+.card .sub{font-size:11px;color:var(--muted);margin-top:2px}
+.portrait{width:34px;height:34px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 10px 30px rgba(0,0,0,.35);}
+.badge{font-size:11px;font-weight:900;border-radius:999px;padding:6px 9px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.18);}
+.badge.mana{border-color: rgba(122,168,255,.30);}
+.badge.lvl{border-color: rgba(88,255,155,.28);}
+.hint{text-align:center;color:var(--muted);font-size:12px;}
+.pill{font-size:12px;font-weight:900;border-radius:999px;padding:6px 10px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.18);}
+.pill.good{border-color: rgba(88,255,155,.25)}
+.pill.bad{border-color: rgba(255,92,122,.25)}
+.pill.warn{border-color: rgba(255,209,92,.25)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.68);display:none;align-items:center;justify-content:center;padding:16px;z-index:10;}
+.modal{pointer-events:auto;width:min(940px,100%);max-height:86vh;overflow:hidden;border-radius:18px;border:1px solid rgba(255,255,255,.14);
+  background:linear-gradient(180deg,rgba(15,23,48,.98),rgba(8,10,18,.98));box-shadow:0 30px 90px rgba(0,0,0,.60);}
+.modal .head{padding:14px 14px 10px;display:flex;justify-content:space-between;gap:10px;align-items:center;border-bottom:1px solid rgba(255,255,255,.10);}
+.modal .body{padding:12px 14px 14px;overflow:auto;max-height:calc(86vh - 64px);}
+.modal h2{margin:0;font-size:16px}
+.modal p{margin:6px 0;color:var(--muted);line-height:1.35;font-size:13px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.small{font-size:12px;color:var(--muted)}
+.list{border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.18);border-radius:16px;overflow:hidden;}
+.item{padding:10px 10px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;gap:10px;align-items:flex-start;}
+.item:last-child{border-bottom:none}
+.item .left{display:flex;flex-direction:column;gap:2px}
+.item .title{font-weight:950;font-size:13px}
+.item .desc{font-size:12px;color:var(--muted)}
+.chip{font-size:11px;font-weight:950;padding:6px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.20);white-space:nowrap;}
+.chip.ok{border-color: rgba(88,255,155,.25)}
+.chip.lock{border-color: rgba(255,92,122,.25)}
+.search{width:100%;padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.22);color:var(--ink);font-weight:800;}
+.r-unranked{color:#d9e2ff}
+.r-bronze{color:#d7b07a}
+.r-silver{color:#cfd8e8}
+.r-gold{color:#ffd15c}
+.r-platinum{color:#8ce8ff}
+.r-diamond{color:#b9a6ff}
+.r-emerald{color:#58ff9b}
+.r-ruby{color:#ff6aa6}
+.r-legendary{color:#ffcc66;text-shadow:0 0 18px rgba(255,209,92,.35)}
+.r-mythic{color:#7aa8ff;text-shadow:0 0 18px rgba(122,168,255,.35)}
+.r-secret{color:#ffffff;text-shadow:0 0 22px rgba(255,255,255,.35)}
+
+@media (max-width: 520px){
+  #manaRow{flex-direction:column;}
+  #manaRow .panel{width:100%;}
+
+  .wrap{padding-left:8px;padding-right:8px;gap:8px}
+  .topbar{grid-template-columns:1fr;gap:8px}
+  .statgrid{grid-template-columns:repeat(3,1fr);gap:8px}
+  .btn{min-height:42px;padding:10px 12px;border-radius:14px}
+  #canvas{border-radius:16px}
+  .handwrap{gap:6px}
+  .hand{overflow-x:auto; -webkit-overflow-scrolling: touch; scroll-snap-type:x mandatory; padding-bottom:2px}
+  .hand::-webkit-scrollbar{display:none}
+  .card{min-width:72vw; flex:0 0 auto; scroll-snap-align:start; min-height:90px; border-radius:16px}
+  .portrait{width:32px;height:32px;border-radius:11px}
+  .card .name{font-size:13px}
+  .card .sub{font-size:11px}
+  .badge{font-size:11px;padding:6px 8px}
+  .hint{font-size:11.5px}
+  .grid3{grid-template-columns:1fr;gap:8px}
+  .grid2{grid-template-columns:1fr;gap:8px}
+}
+@media (max-width: 380px){
+  .statgrid{grid-template-columns:repeat(2,1fr)}
+  .card{min-width:80vw}
+}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="panel">
+      <div class="statgrid">
+        <div class="stat"><div class="k">Rank</div><div class="v" id="rankName">Unranked</div></div>
+        <div class="stat"><div class="k">Rank %</div><div class="v"><span id="rankPct">0.0</span>%</div></div>
+        <div class="stat"><div class="k">Unlocked</div><div class="v"><span id="unlockedCount">0</span>/<span id="totalCards">0</span></div></div>
+        <div class="stat"><div class="k">Gold</div><div class="v" id="gold">0</div></div>
+        <div class="stat"><div class="k">Streak</div><div class="v"><span id="streak">0</span> (Best <span id="bestStreak">0</span>)</div></div>
+        <div class="stat"><div class="k">Time</div><div class="v" id="timeLeft">5:00</div></div>
+      </div>
+    </div>
+    <div class="btn secondary" id="btnChests">Chests</div>
+    <div class="btn secondary" id="btnUpgrades">Upgrades</div>
+    <div class="btn" id="btnHome">Home</div>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <div class="handwrap">
+
+    <div class="row" id="manaRow" style="justify-content:space-between; gap:10px; align-items:center">
+      <div class="panel" style="flex:1; padding:8px 10px;">
+        <div class="row" style="justify-content:space-between; align-items:center">
+          <div class="small">Your Mana</div>
+          <div class="pill" style="padding:5px 10px;">🔮 <b id="manaNow">0</b>/<span id="manaMax">10</span></div>
+        </div>
+        <div style="height:10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.18);overflow:hidden;margin-top:6px">
+          <div id="manaBar" style="height:100%;width:0%;border-radius:999px;background:linear-gradient(90deg,rgba(122,168,255,.90),rgba(122,168,255,.35));"></div>
+        </div>
+      </div>
+      <div class="panel" style="flex:1; padding:8px 10px;">
+        <div class="row" style="justify-content:space-between; align-items:center">
+          <div class="small">Enemy Mana</div>
+          <div class="pill" style="padding:5px 10px;">🔮 <b id="emanaNow">0</b>/<span id="emanaMax">10</span></div>
+        </div>
+        <div style="height:10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.18);overflow:hidden;margin-top:6px">
+          <div id="emanaBar" style="height:100%;width:0%;border-radius:999px;background:linear-gradient(90deg,rgba(255,209,92,.85),rgba(255,209,92,.30));"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hand" id="hand"></div>
+    <div class="hint">Tap a card → tap a lane. <b>Ranked</b> gives % + chests. <b>Practice</b> gives nothing. Progress auto-saves.</div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+
+<script>
+(() => {
+  const RANKS = [{"id": "unranked", "name": "Unranked", "winsToPromote": 2}, {"id": "bronze", "name": "Bronze", "winsToPromote": 3}, {"id": "silver", "name": "Silver", "winsToPromote": 4}, {"id": "gold", "name": "Gold", "winsToPromote": 5}, {"id": "platinum", "name": "Platinum", "winsToPromote": 6}, {"id": "diamond", "name": "Diamond", "winsToPromote": 7}, {"id": "emerald", "name": "Emerald", "winsToPromote": 8}, {"id": "ruby", "name": "Ruby", "winsToPromote": 10}, {"id": "legendary", "name": "Legendary", "winsToPromote": 14}, {"id": "mythic", "name": "Mythic", "winsToPromote": 20}, {"id": "secret", "name": "Secret", "winsToPromote": 999}];
+  const CARDS = [{"id": "duelist-of-thorns-1", "name": "Duelist of Thorns 1", "rank": "unranked", "cost": 3, "kind": "unit", "hp": 256, "dmg": 45, "atkSpd": 0.75, "spd": 49, "range": 18, "archetype": "assassin", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "squire-of-dawn-2", "name": "Squire of Dawn 2", "rank": "unranked", "cost": 4, "kind": "unit", "hp": 340, "dmg": 40, "atkSpd": 0.95, "spd": 34, "range": 18, "archetype": "tankish", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "guardian-of-storms-3", "name": "Guardian of Storms 3", "rank": "unranked", "cost": 4, "kind": "unit", "hp": 493, "dmg": 31, "atkSpd": 0.95, "spd": 29, "range": 18, "archetype": "tank", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "squire-of-iron-4", "name": "Squire of Iron 4", "rank": "unranked", "cost": 2, "kind": "unit", "hp": 230, "dmg": 28, "atkSpd": 0.95, "spd": 32, "range": 18, "archetype": "tankish", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "squire-of-dawn-5", "name": "Squire of Dawn 5", "rank": "unranked", "cost": 3, "kind": "unit", "hp": 285, "dmg": 34, "atkSpd": 0.95, "spd": 33, "range": 18, "archetype": "tankish", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "pikeman-of-dawn-6", "name": "Pikeman of Dawn 6", "rank": "unranked", "cost": 2, "kind": "unit", "hp": 241, "dmg": 26, "atkSpd": 0.95, "spd": 32, "range": 18, "archetype": "anti-tank", "bonusVs": "tank", "bonusMul": 1.35, "note": "Bonus vs tanky units (1.35x)."}, {"id": "frost-mist-of-iron-1", "name": "Frost Mist of Iron 1", "rank": "unranked", "cost": 3, "kind": "spell", "dmg": 60, "radius": 98, "slow": 0.42, "slowDur": 2.8, "note": "Damages and slows enemies."}, {"id": "spark-of-ivory-2", "name": "Spark of Ivory 2", "rank": "unranked", "cost": 2, "kind": "spell", "dmg": 106, "radius": 82, "note": "Quick burst of damage in a lane."}, {"id": "healing-light-of-shadow-3", "name": "Healing Light of Shadow 3", "rank": "unranked", "cost": 4, "kind": "spell", "heal": 190, "radius": 108, "note": "Heals allies in a lane."}, {"id": "arcane-ward-of-ash-4", "name": "Arcane Ward of Ash 4", "rank": "unranked", "cost": 4, "kind": "spell", "shieldAllies": 167, "radius": 104, "note": "Grants a temporary shield to allies in a lane."}, {"id": "pikeman-of-ash-1", "name": "Pikeman of Ash 1", "rank": "bronze", "cost": 3, "kind": "unit", "hp": 335, "dmg": 36, "atkSpd": 0.95, "spd": 37, "range": 18, "archetype": "anti-tank", "bonusVs": "tank", "bonusMul": 1.4, "note": "Bonus vs tanky units (1.4x)."}, {"id": "squire-of-iron-2", "name": "Squire of Iron 2", "rank": "bronze", "cost": 3, "kind": "unit", "hp": 319, "dmg": 38, "atkSpd": 0.95, "spd": 37, "range": 18, "archetype": "tankish", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "berserker-of-the-vale-3", "name": "Berserker of the Vale 3", "rank": "bronze", "cost": 3, "kind": "unit", "hp": 351, "dmg": 43, "atkSpd": 0.9, "spd": 48, "range": 18, "archetype": "bruiser", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "guardian-of-ivory-4", "name": "Guardian of Ivory 4", "rank": "bronze", "cost": 4, "kind": "unit", "hp": 552, "dmg": 34, "atkSpd": 0.95, "spd": 33, "range": 18, "archetype": "tank", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "ranger-of-dawn-5", "name": "Ranger of Dawn 5", "rank": "bronze", "cost": 3, "kind": "unit", "hp": 248, "dmg": 34, "atkSpd": 0.8, "spd": 41, "range": 140, "archetype": "ranged", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "duelist-of-dawn-6", "name": "Duelist of Dawn 6", "rank": "bronze", "cost": 2, "kind": "unit", "hp": 231, "dmg": 42, "atkSpd": 0.75, "spd": 53, "range": 18, "archetype": "assassin", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "squire-of-ivory-7", "name": "Squire of Ivory 7", "rank": "bronze", "cost": 3, "kind": "unit", "hp": 319, "dmg": 38, "atkSpd": 0.95, "spd": 37, "range": 18, "archetype": "tankish", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "void-rift-of-shadow-1", "name": "Void Rift of Shadow 1", "rank": "bronze", "cost": 5, "kind": "spell", "dmg": 369, "radius": 118, "pull": 0.7, "note": "Pulls enemies inward and hits hard."}, {"id": "dragon-breath-of-the-deep-2", "name": "Dragon Breath of the Deep 2", "rank": "bronze", "cost": 5, "kind": "spell", "dmg": 134, "radius": 170, "dot": 49, "dotDur": 3.4, "note": "Wide lane burn: damage + burning over time."}, {"id": "dragon-breath-of-cinders-3", "name": "Dragon Breath of Cinders 3", "rank": "bronze", "cost": 3, "kind": "spell", "dmg": 98, "radius": 150, "dot": 35, "dotDur": 3.2, "note": "Wide lane burn: damage + burning over time."}, {"id": "meteor-of-frost-4", "name": "Meteor of Frost 4", "rank": "bronze", "cost": 2, "kind": "spell", "dmg": 224, "radius": 100, "stun": 0.64, "note": "Big AoE hit with a brief stun."}, {"id": "arcane-ward-of-cinders-5", "name": "Arcane Ward of Cinders 5", "rank": "bronze", "cost": 5, "kind": "spell", "shieldAllies": 218, "radius": 110, "note": "Grants a temporary shield to allies in a lane."}, {"id": "duelist-of-the-deep-1", "name": "Duelist of the Deep 1", "rank": "silver", "cost": 4, "kind": "unit", "hp": 379, "dmg": 66, "atkSpd": 0.75, "spd": 62, "range": 18, "archetype": "assassin", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "guardian-of-dawn-2", "name": "Guardian of Dawn 2", "rank": "silver", "cost": 5, "kind": "unit", "hp": 710, "dmg": 44, "atkSpd": 0.95, "spd": 37, "range": 18, "archetype": "tank", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "pikeman-of-thorns-3", "name": "Pikeman of Thorns 3", "rank": "silver", "cost": 4, "kind": "unit", "hp": 442, "dmg": 47, "atkSpd": 0.95, "spd": 43, "range": 18, "archetype": "anti-tank", "bonusVs": "tank", "bonusMul": 1.45, "note": "Bonus vs tanky units (1.45x)."}, {"id": "ranger-of-the-deep-4", "name": "Ranger of the Deep 4", "rank": "silver", "cost": 4, "kind": "unit", "hp": 328, "dmg": 44, "atkSpd": 0.8, "spd": 47, "range": 140, "archetype": "ranged", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "squire-of-shadow-5", "name": "Squire of Shadow 5", "rank": "silver", "cost": 3, "kind": "unit", "hp": 353, "dmg": 42, "atkSpd": 0.95, "spd": 41, "range": 18, "archetype": "tankish", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "duelist-of-storms-6", "name": "Duelist of Storms 6", "rank": "silver", "cost": 5, "kind": "unit", "hp": 440, "dmg": 77, "atkSpd": 0.75, "spd": 63, "range": 18, "archetype": "assassin", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "duelist-of-ivory-7", "name": "Duelist of Ivory 7", "rank": "silver", "cost": 4, "kind": "unit", "hp": 379, "dmg": 66, "atkSpd": 0.75, "spd": 62, "range": 18, "archetype": "assassin", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "skirmisher-of-dawn-8", "name": "Skirmisher of Dawn 8", "rank": "silver", "cost": 3, "kind": "unit", "hp": 219, "dmg": 32, "atkSpd": 0.7, "spd": 63, "range": 18, "archetype": "swarm", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "chain-lightning-of-the-deep-1", "name": "Chain Lightning of the Deep 1", "rank": "silver", "cost": 5, "kind": "spell", "dmg": 223, "jumps": 3, "radius": 42, "note": "Bounces between up to 3 enemies."}, {"id": "silence-sigil-of-dawn-2", "name": "Silence Sigil of Dawn 2", "rank": "silver", "cost": 3, "kind": "spell", "radius": 104, "silence": 1.88, "note": "Silences enemies (slows their attacks) briefly."}, {"id": "poison-cloud-of-cinders-3", "name": "Poison Cloud of Cinders 3", "rank": "silver", "cost": 5, "kind": "spell", "dmg": 89, "radius": 122, "dot": 65, "dotDur": 3.8, "note": "Poison cloud: damage + strong DoT."}, {"id": "arcane-ward-of-shadow-4", "name": "Arcane Ward of Shadow 4", "rank": "silver", "cost": 4, "kind": "spell", "shieldAllies": 207, "radius": 104, "note": "Grants a temporary shield to allies in a lane."}, {"id": "chain-lightning-of-the-vale-5", "name": "Chain Lightning of the Vale 5", "rank": "silver", "cost": 5, "kind": "spell", "dmg": 223, "jumps": 3, "radius": 42, "note": "Bounces between up to 3 enemies."}, {"id": "duelist-of-ash-1", "name": "Duelist of Ash 1", "rank": "gold", "cost": 6, "kind": "unit", "hp": 550, "dmg": 95, "atkSpd": 0.75, "spd": 71, "range": 18, "archetype": "assassin", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "duelist-of-thorns-2", "name": "Duelist of Thorns 2", "rank": "gold", "cost": 3, "kind": "unit", "hp": 348, "dmg": 62, "atkSpd": 0.75, "spd": 66, "range": 18, "archetype": "assassin", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "skirmisher-of-ash-3", "name": "Skirmisher of Ash 3", "rank": "gold", "cost": 4, "kind": "unit", "hp": 286, "dmg": 42, "atkSpd": 0.7, "spd": 70, "range": 18, "archetype": "swarm", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "berserker-of-thorns-4", "name": "Berserker of Thorns 4", "rank": "gold", "cost": 4, "kind": "unit", "hp": 508, "dmg": 62, "atkSpd": 0.9, "spd": 60, "range": 18, "archetype": "bruiser", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "pikeman-of-the-vale-5", "name": "Pikeman of the Vale 5", "rank": "gold", "cost": 6, "kind": "unit", "hp": 642, "dmg": 67, "atkSpd": 0.95, "spd": 50, "range": 18, "archetype": "anti-tank", "bonusVs": "tank", "bonusMul": 1.55, "note": "Bonus vs tanky units (1.55x)."}, {"id": "guardian-of-thorns-6", "name": "Guardian of Thorns 6", "rank": "gold", "cost": 6, "kind": "unit", "hp": 887, "dmg": 55, "atkSpd": 0.95, "spd": 43, "range": 18, "archetype": "tank", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "pikeman-of-iron-7", "name": "Pikeman of Iron 7", "rank": "gold", "cost": 5, "kind": "unit", "hp": 564, "dmg": 59, "atkSpd": 0.95, "spd": 48, "range": 18, "archetype": "anti-tank", "bonusVs": "tank", "bonusMul": 1.5, "note": "Bonus vs tanky units (1.5x)."}, {"id": "ranger-of-the-vale-8", "name": "Ranger of the Vale 8", "rank": "gold", "cost": 5, "kind": "unit", "hp": 419, "dmg": 56, "atkSpd": 0.8, "spd": 53, "range": 140, "archetype": "ranged", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "poison-cloud-of-the-vale-1", "name": "Poison Cloud of the Vale 1", "rank": "gold", "cost": 5, "kind": "spell", "dmg": 97, "radius": 122, "dot": 72, "dotDur": 3.8, "note": "Poison cloud: damage + strong DoT."}, {"id": "silence-sigil-of-the-vale-2", "name": "Silence Sigil of the Vale 2", "rank": "gold", "cost": 4, "kind": "spell", "radius": 110, "silence": 2.04, "note": "Silences enemies (slows their attacks) briefly."}, {"id": "meteor-of-dawn-3", "name": "Meteor of Dawn 3", "rank": "gold", "cost": 4, "kind": "spell", "dmg": 380, "radius": 112, "stun": 0.78, "note": "Big AoE hit with a brief stun."}, {"id": "meteor-of-frost-4", "name": "Meteor of Frost 4", "rank": "gold", "cost": 4, "kind": "spell", "dmg": 380, "radius": 112, "stun": 0.78, "note": "Big AoE hit with a brief stun."}, {"id": "spark-of-the-deep-5", "name": "Spark of the Deep 5", "rank": "gold", "cost": 4, "kind": "spell", "dmg": 220, "radius": 94, "note": "Quick burst of damage in a lane."}, {"id": "berserker-of-cinders-1", "name": "Berserker of Cinders 1", "rank": "platinum", "cost": 3, "kind": "unit", "hp": 463, "dmg": 57, "atkSpd": 0.9, "spd": 64, "range": 18, "archetype": "bruiser", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "ranger-of-the-vale-2", "name": "Ranger of the Vale 2", "rank": "platinum", "cost": 5, "kind": "unit", "hp": 455, "dmg": 61, "atkSpd": 0.8, "spd": 58, "range": 140, "archetype": "ranged", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "duelist-of-thorns-3", "name": "Duelist of Thorns 3", "rank": "platinum", "cost": 3, "kind": "unit", "hp": 379, "dmg": 67, "atkSpd": 0.75, "spd": 72, "range": 18, "archetype": "assassin", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "skirmisher-of-shadow-4", "name": "Skirmisher of Shadow 4", "rank": "platinum", "cost": 6, "kind": "unit", "hp": 412, "dmg": 60, "atkSpd": 0.7, "spd": 80, "range": 18, "archetype": "swarm", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "pikeman-of-the-vale-5", "name": "Pikeman of the Vale 5", "rank": "platinum", "cost": 6, "kind": "unit", "hp": 699, "dmg": 73, "atkSpd": 0.95, "spd": 54, "range": 18, "archetype": "anti-tank", "bonusVs": "tank", "bonusMul": 1.55, "note": "Bonus vs tanky units (1.55x)."}, {"id": "guardian-of-the-deep-6", "name": "Guardian of the Deep 6", "rank": "platinum", "cost": 6, "kind": "unit", "hp": 965, "dmg": 60, "atkSpd": 0.95, "spd": 46, "range": 18, "archetype": "tank", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "squire-of-frost-7", "name": "Squire of Frost 7", "rank": "platinum", "cost": 3, "kind": "unit", "hp": 421, "dmg": 50, "atkSpd": 0.95, "spd": 50, "range": 18, "archetype": "tankish", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "sorcerer-of-the-deep-8", "name": "Sorcerer of the Deep 8", "rank": "platinum", "cost": 4, "kind": "unit", "hp": 345, "dmg": 49, "atkSpd": 0.85, "spd": 51, "range": 150, "archetype": "control", "curse": 0.22, "note": "Curses targets: they take 22% more damage for a short time."}, {"id": "frost-mist-of-storms-1", "name": "Frost Mist of Storms 1", "rank": "platinum", "cost": 3, "kind": "spell", "dmg": 88, "radius": 98, "slow": 0.42, "slowDur": 2.8, "note": "Damages and slows enemies."}, {"id": "frost-mist-of-ash-2", "name": "Frost Mist of Ash 2", "rank": "platinum", "cost": 4, "kind": "spell", "dmg": 109, "radius": 104, "slow": 0.46, "slowDur": 3.0, "note": "Damages and slows enemies."}, {"id": "summon-imps-of-dawn-3", "name": "Summon Imps of Dawn 3", "rank": "platinum", "cost": 5, "kind": "spell", "summon": {"name": "Imp", "hp": 170, "dmg": 44, "atkSpd": 0.85, "spd": 95, "range": 16, "archetype": "swarm"}, "count": 4, "note": "Spawns 4 imps in the lane."}, {"id": "arcane-ward-of-ash-4", "name": "Arcane Ward of Ash 4", "rank": "platinum", "cost": 3, "kind": "spell", "shieldAllies": 205, "radius": 98, "note": "Grants a temporary shield to allies in a lane."}, {"id": "healing-light-of-ivory-5", "name": "Healing Light of Ivory 5", "rank": "platinum", "cost": 6, "kind": "spell", "heal": 370, "radius": 120, "note": "Heals allies in a lane."}, {"id": "meteor-of-shadow-6", "name": "Meteor of Shadow 6", "rank": "platinum", "cost": 5, "kind": "spell", "dmg": 473, "radius": 118, "stun": 0.85, "note": "Big AoE hit with a brief stun."}, {"id": "duelist-of-ivory-1", "name": "Duelist of Ivory 1", "rank": "diamond", "cost": 5, "kind": "unit", "hp": 568, "dmg": 99, "atkSpd": 0.75, "spd": 82, "range": 18, "archetype": "assassin", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "skirmisher-of-dawn-2", "name": "Skirmisher of Dawn 2", "rank": "diamond", "cost": 3, "kind": "unit", "hp": 282, "dmg": 42, "atkSpd": 0.7, "spd": 81, "range": 18, "archetype": "swarm", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "skirmisher-of-the-deep-3", "name": "Skirmisher of the Deep 3", "rank": "diamond", "cost": 6, "kind": "unit", "hp": 446, "dmg": 64, "atkSpd": 0.7, "spd": 86, "range": 18, "archetype": "swarm", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "skirmisher-of-cinders-4", "name": "Skirmisher of Cinders 4", "rank": "diamond", "cost": 3, "kind": "unit", "hp": 282, "dmg": 42, "atkSpd": 0.7, "spd": 81, "range": 18, "archetype": "swarm", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "ranger-of-dawn-5", "name": "Ranger of Dawn 5", "rank": "diamond", "cost": 5, "kind": "unit", "hp": 492, "dmg": 66, "atkSpd": 0.8, "spd": 63, "range": 140, "archetype": "ranged", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "berserker-of-the-deep-6", "name": "Berserker of the Deep 6", "rank": "diamond", "cost": 4, "kind": "unit", "hp": 598, "dmg": 73, "atkSpd": 0.9, "spd": 71, "range": 18, "archetype": "bruiser", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "squire-of-frost-7", "name": "Squire of Frost 7", "rank": "diamond", "cost": 7, "kind": "unit", "hp": 808, "dmg": 92, "atkSpd": 0.95, "spd": 61, "range": 18, "archetype": "tankish", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "duelist-of-thorns-8", "name": "Duelist of Thorns 8", "rank": "diamond", "cost": 7, "kind": "unit", "hp": 727, "dmg": 125, "atkSpd": 0.75, "spd": 85, "range": 18, "archetype": "assassin", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "spark-of-iron-1", "name": "Spark of Iron 1", "rank": "diamond", "cost": 5, "kind": "spell", "dmg": 304, "radius": 100, "note": "Quick burst of damage in a lane."}, {"id": "silence-sigil-of-dawn-2", "name": "Silence Sigil of Dawn 2", "rank": "diamond", "cost": 5, "kind": "spell", "radius": 116, "silence": 2.2, "note": "Silences enemies (slows their attacks) briefly."}, {"id": "summon-imps-of-storms-3", "name": "Summon Imps of Storms 3", "rank": "diamond", "cost": 4, "kind": "spell", "summon": {"name": "Imp", "hp": 164, "dmg": 41, "atkSpd": 0.85, "spd": 100, "range": 16, "archetype": "swarm"}, "count": 3, "note": "Spawns 3 imps in the lane."}, {"id": "dragon-breath-of-frost-4", "name": "Dragon Breath of Frost 4", "rank": "diamond", "cost": 7, "kind": "spell", "dmg": 243, "radius": 190, "dot": 89, "dotDur": 3.6, "note": "Wide lane burn: damage + burning over time."}, {"id": "summon-imps-of-iron-5", "name": "Summon Imps of Iron 5", "rank": "diamond", "cost": 5, "kind": "spell", "summon": {"name": "Imp", "hp": 184, "dmg": 48, "atkSpd": 0.85, "spd": 103, "range": 16, "archetype": "swarm"}, "count": 4, "note": "Spawns 4 imps in the lane."}, {"id": "silence-sigil-of-frost-6", "name": "Silence Sigil of Frost 6", "rank": "diamond", "cost": 7, "kind": "spell", "radius": 128, "silence": 2.52, "note": "Silences enemies (slows their attacks) briefly."}, {"id": "sorcerer-of-frost-1", "name": "Sorcerer of Frost 1", "rank": "emerald", "cost": 7, "kind": "unit", "hp": 596, "dmg": 82, "atkSpd": 0.85, "spd": 65, "range": 150, "archetype": "control", "curse": 0.31, "note": "Curses targets: they take 31% more damage for a short time."}, {"id": "sorcerer-of-frost-2", "name": "Sorcerer of Frost 2", "rank": "emerald", "cost": 7, "kind": "unit", "hp": 596, "dmg": 82, "atkSpd": 0.85, "spd": 65, "range": 150, "archetype": "control", "curse": 0.31, "note": "Curses targets: they take 31% more damage for a short time."}, {"id": "duelist-of-ash-3", "name": "Duelist of Ash 3", "rank": "emerald", "cost": 4, "kind": "unit", "hp": 526, "dmg": 92, "atkSpd": 0.75, "spd": 86, "range": 18, "archetype": "assassin", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "berserker-of-the-deep-4", "name": "Berserker of the Deep 4", "rank": "emerald", "cost": 6, "kind": "unit", "hp": 851, "dmg": 102, "atkSpd": 0.9, "spd": 80, "range": 18, "archetype": "bruiser", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "sorcerer-of-ivory-5", "name": "Sorcerer of Ivory 5", "rank": "emerald", "cost": 6, "kind": "unit", "hp": 531, "dmg": 74, "atkSpd": 0.85, "spd": 63, "range": 150, "archetype": "control", "curse": 0.28, "note": "Curses targets: they take 28% more damage for a short time."}, {"id": "skirmisher-of-storms-6", "name": "Skirmisher of Storms 6", "rank": "emerald", "cost": 6, "kind": "unit", "hp": 479, "dmg": 69, "atkSpd": 0.7, "spd": 93, "range": 18, "archetype": "swarm", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "guardian-of-frost-7", "name": "Guardian of Frost 7", "rank": "emerald", "cost": 4, "kind": "unit", "hp": 847, "dmg": 53, "atkSpd": 0.95, "spd": 50, "range": 18, "archetype": "tank", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "sorcerer-of-the-deep-8", "name": "Sorcerer of the Deep 8", "rank": "emerald", "cost": 5, "kind": "unit", "hp": 466, "dmg": 65, "atkSpd": 0.85, "spd": 61, "range": 150, "archetype": "control", "curse": 0.25, "note": "Curses targets: they take 25% more damage for a short time."}, {"id": "duelist-of-frost-9", "name": "Duelist of Frost 9", "rank": "emerald", "cost": 7, "kind": "unit", "hp": 781, "dmg": 134, "atkSpd": 0.75, "spd": 91, "range": 18, "archetype": "assassin", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "squire-of-the-deep-10", "name": "Squire of the Deep 10", "rank": "emerald", "cost": 6, "kind": "unit", "hp": 774, "dmg": 89, "atkSpd": 0.95, "spd": 63, "range": 18, "archetype": "tankish", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "silence-sigil-of-dawn-1", "name": "Silence Sigil of Dawn 1", "rank": "emerald", "cost": 4, "kind": "spell", "radius": 110, "silence": 2.04, "note": "Silences enemies (slows their attacks) briefly."}, {"id": "time-stop-of-frost-2", "name": "Time Stop of Frost 2", "rank": "emerald", "cost": 7, "kind": "spell", "radius": 142, "freeze": 2.46, "note": "Freezes enemies briefly in a lane."}, {"id": "meteor-of-the-vale-3", "name": "Meteor of the Vale 3", "rank": "emerald", "cost": 6, "kind": "spell", "dmg": 619, "radius": 124, "stun": 0.92, "note": "Big AoE hit with a brief stun."}, {"id": "frost-mist-of-the-vale-4", "name": "Frost Mist of the Vale 4", "rank": "emerald", "cost": 7, "kind": "spell", "dmg": 199, "radius": 122, "slow": 0.55, "slowDur": 3.5, "note": "Damages and slows enemies."}, {"id": "time-stop-of-dawn-5", "name": "Time Stop of Dawn 5", "rank": "emerald", "cost": 5, "kind": "spell", "radius": 130, "freeze": 2.1, "note": "Freezes enemies briefly in a lane."}, {"id": "meteor-of-thorns-6", "name": "Meteor of Thorns 6", "rank": "emerald", "cost": 4, "kind": "spell", "dmg": 481, "radius": 112, "stun": 0.78, "note": "Big AoE hit with a brief stun."}, {"id": "meteor-of-ivory-7", "name": "Meteor of Ivory 7", "rank": "emerald", "cost": 7, "kind": "spell", "dmg": 688, "radius": 130, "stun": 0.99, "note": "Big AoE hit with a brief stun."}, {"id": "ranger-of-ivory-1", "name": "Ranger of Ivory 1", "rank": "ruby", "cost": 7, "kind": "unit", "hp": 724, "dmg": 96, "atkSpd": 0.8, "spd": 76, "range": 140, "archetype": "ranged", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "duelist-of-thorns-2", "name": "Duelist of Thorns 2", "rank": "ruby", "cost": 5, "kind": "unit", "hp": 654, "dmg": 114, "atkSpd": 0.75, "spd": 94, "range": 18, "archetype": "assassin", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "squire-of-ash-3", "name": "Squire of Ash 3", "rank": "ruby", "cost": 4, "kind": "unit", "hp": 625, "dmg": 73, "atkSpd": 0.95, "spd": 64, "range": 18, "archetype": "tankish", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "ranger-of-the-vale-4", "name": "Ranger of the Vale 4", "rank": "ruby", "cost": 5, "kind": "unit", "hp": 566, "dmg": 76, "atkSpd": 0.8, "spd": 72, "range": 140, "archetype": "ranged", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "sorcerer-of-ash-5", "name": "Sorcerer of Ash 5", "rank": "ruby", "cost": 6, "kind": "unit", "hp": 568, "dmg": 79, "atkSpd": 0.85, "spd": 68, "range": 150, "archetype": "control", "curse": 0.28, "note": "Curses targets: they take 28% more damage for a short time."}, {"id": "sorcerer-of-cinders-6", "name": "Sorcerer of Cinders 6", "rank": "ruby", "cost": 5, "kind": "unit", "hp": 498, "dmg": 70, "atkSpd": 0.85, "spd": 66, "range": 150, "archetype": "control", "curse": 0.25, "note": "Curses targets: they take 25% more damage for a short time."}, {"id": "duelist-of-cinders-7", "name": "Duelist of Cinders 7", "rank": "ruby", "cost": 7, "kind": "unit", "hp": 836, "dmg": 144, "atkSpd": 0.75, "spd": 98, "range": 18, "archetype": "assassin", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "ranger-of-ash-8", "name": "Ranger of Ash 8", "rank": "ruby", "cost": 6, "kind": "unit", "hp": 645, "dmg": 86, "atkSpd": 0.8, "spd": 74, "range": 140, "archetype": "ranged", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "skirmisher-of-shadow-9", "name": "Skirmisher of Shadow 9", "rank": "ruby", "cost": 7, "kind": "unit", "hp": 576, "dmg": 83, "atkSpd": 0.7, "spd": 101, "range": 18, "archetype": "swarm", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "ranger-of-iron-10", "name": "Ranger of Iron 10", "rank": "ruby", "cost": 5, "kind": "unit", "hp": 566, "dmg": 76, "atkSpd": 0.8, "spd": 72, "range": 140, "archetype": "ranged", "note": "Summon to a lane to push toward the enemy castle."}, {"id": "summon-imps-of-iron-1", "name": "Summon Imps of Iron 1", "rank": "ruby", "cost": 4, "kind": "spell", "summon": {"name": "Imp", "hp": 189, "dmg": 47, "atkSpd": 0.85, "spd": 115, "range": 16, "archetype": "swarm"}, "count": 3, "note": "Spawns 3 imps in the lane."}, {"id": "void-rift-of-thorns-2", "name": "Void Rift of Thorns 2", "rank": "ruby", "cost": 4, "kind": "spell", "dmg": 544, "radius": 112, "pull": 0.67, "note": "Pulls enemies inward and hits hard."}, {"id": "meteor-of-thorns-3", "name": "Meteor of Thorns 3", "rank": "ruby", "cost": 5, "kind": "spell", "dmg": 588, "radius": 118, "stun": 0.85, "note": "Big AoE hit with a brief stun."}, {"id": "void-rift-of-ivory-4", "name": "Void Rift of Ivory 4", "rank": "ruby", "cost": 4, "kind": "spell", "dmg": 544, "radius": 112, "pull": 0.67, "note": "Pulls enemies inward and hits hard."}, {"id": "summon-imps-of-ash-5", "name": "Summon Imps of Ash 5", "rank": "ruby", "cost": 6, "kind": "spell", "summon": {"name": "Imp", "hp": 233, "dmg": 62, "atkSpd": 0.85, "spd": 122, "range": 16, "archetype": "swarm"}, "count": 4, "note": "Spawns 4 imps in the lane."}, {"id": "silence-sigil-of-iron-6", "name": "Silence Sigil of Iron 6", "rank": "ruby", "cost": 7, "kind": "spell", "radius": 128, "silence": 2.52, "note": "Silences enemies (slows their attacks) briefly."}, {"id": "frost-mist-of-iron-7", "name": "Frost Mist of Iron 7", "rank": "ruby", "cost": 4, "kind": "spell", "dmg": 136, "radius": 104, "slow": 0.46, "slowDur": 3.0, "note": "Damages and slows enemies."}, {"id": "paladin", "name": "Paladin", "rank": "legendary", "cost": 6, "kind": "unit", "hp": 820, "dmg": 34, "atkSpd": 0.9, "spd": 34, "range": 18, "archetype": "tank", "auraHeal": 14, "shield": 180, "note": "Elite tank. Big HP, starts with a shield, and heals nearby allies."}, {"id": "warlock", "name": "Warlock", "rank": "legendary", "cost": 6, "kind": "unit", "hp": 480, "dmg": 30, "atkSpd": 0.78, "spd": 32, "range": 155, "archetype": "control", "curse": 0.28, "note": "Elite ranged control. Curses targets so they take 28% more damage briefly."}, {"id": "golem", "name": "Golem", "rank": "legendary", "cost": 7, "kind": "unit", "hp": 1100, "dmg": 42, "atkSpd": 1.05, "spd": 26, "range": 18, "archetype": "tank", "note": "Elite wall. Slow, but absurdly tanky."}, {"id": "dragon-breath", "name": "Dragon Breath", "rank": "legendary", "cost": 6, "kind": "spell", "dmg": 90, "radius": 165, "dot": 28, "dotDur": 3.2, "note": "Elite lane burn. Wide hit + strong burn over time."}, {"id": "chain-lightning", "name": "Chain Lightning", "rank": "legendary", "cost": 6, "kind": "spell", "dmg": 150, "jumps": 3, "radius": 42, "note": "Elite punishment spell. Bounces between 3 enemies."}, {"id": "phoenix", "name": "Phoenix", "rank": "mythic", "cost": 7, "kind": "unit", "hp": 520, "dmg": 44, "atkSpd": 0.78, "spd": 56, "range": 135, "archetype": "ranged", "revive": true, "multiShot": 2, "note": "Top-tier ranged carry. Multi-shot and revives once."}, {"id": "time-stop", "name": "Time Stop", "rank": "mythic", "cost": 7, "kind": "spell", "radius": 125, "freeze": 2.2, "note": "Freezes enemies in a lane for a long time — perfect for swings."}, {"id": "hydra", "name": "Hydra", "rank": "mythic", "cost": 8, "kind": "unit", "hp": 740, "dmg": 30, "atkSpd": 0.62, "spd": 38, "range": 150, "archetype": "ranged", "multiShot": 3, "note": "Three-headed barrage (3 targets). Melts clustered enemies."}, {"id": "celestial-knight", "name": "Celestial Knight", "rank": "secret", "cost": 8, "kind": "unit", "hp": 980, "dmg": 62, "atkSpd": 0.85, "spd": 42, "range": 22, "archetype": "tankish", "shield": 380, "revive": true, "auraHeal": 22, "note": "Best-in-game frontline. Huge shield, revives once, and heals nearby allies."}, {"id": "void-rift", "name": "Void Rift", "rank": "secret", "cost": 8, "kind": "spell", "dmg": 420, "radius": 110, "pull": 0.75, "stun": 1.0, "note": "Best-in-game spell. Massive damage, pulls enemies together, and stuns briefly."}];
+
+  const SAVE_KEY = "crushlite_v8_save";
+
+  const SECRET_GATE = { mythicWins: 60, totalWins: 260, streak: 15 };
+
+  function rankGainPct(id){
+    const m={unranked:20,bronze:10,silver:9,gold:8,platinum:7,diamond:6,emerald:5,ruby:4,legendary:3,mythic:2,secret:1};
+    return m[id] ?? 6;
+  }
+  function rankLossPct(id){
+    const m={unranked:0,bronze:1,silver:1,gold:2.5,platinum:3.5,diamond:4.5,emerald:5.5,ruby:6.5,legendary:8,mythic:10,secret:12};
+    return m[id] ?? 4;
+  }
+
+  const defaultSave = () => ({
+    rankIndex: 0,
+    rankPct: 0,
+    mythicWins: 0,
+    unlocked: {},
+    gold: 0,
+    streak: 0,
+    bestStreak: 0,
+    stats: { totalWins:0, totalLosses:0, chestsOpened:0 },
+    cardLevel: {},
+    chests: { common:0, rare:0, epic:0, legendary:0 },
+    deck: [],
+    practice: { mode:"meta", meta:"Balanced", deck: [] },
+    lastBot: { name:"", personality:"", deckName:"" },
+  });
+
+  let save = loadSave();
+
+  function loadSave(){
+    try{
+      const raw = localStorage.getItem(SAVE_KEY);
+      if(!raw) return defaultSave();
+      const s = JSON.parse(raw);
+      const d = defaultSave();
+      for(const k in d) if(s[k]===undefined) s[k]=d[k];
+      if(!s.unlocked) s.unlocked={};
+      if(!s.cardLevel) s.cardLevel={};
+      if(!s.chests) s.chests={common:0,rare:0,epic:0,legendary:0};
+      if(!s.stats) s.stats={totalWins:0,totalLosses:0,chestsOpened:0};
+      if(!Array.isArray(s.deck)) s.deck=[];
+      if(!s.practice) s.practice={mode:"meta", meta:"Balanced", deck: []};
+      if(!Array.isArray(s.practice.deck)) s.practice.deck=[];
+      if(!s.lastBot) s.lastBot={name:"",personality:"",deckName:""};
+      s.rankIndex = Math.max(0, Math.min(RANKS.length-1, s.rankIndex||0));
+      s.rankPct = Math.max(0, Math.min(99.9, Number(s.rankPct||0)));
+      s.mythicWins = Number(s.mythicWins||0);
+      return s;
+    }catch(e){ return defaultSave(); }
+  }
+  function persist(){ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }
+
+  function rankById(id){ return RANKS.find(r=>r.id===id); }
+  function rankIndexOf(id){ return RANKS.findIndex(r=>r.id===id); }
+  function currentRank(){ return RANKS[save.rankIndex]; }
+  function getCard(id){ return CARDS.find(c=>c.id===id); }
+  function unlockedCards(){ return CARDS.filter(c=>save.unlocked[c.id]); }
+
+  function ensureInitialUnlocks(){
+    for(const c of CARDS) if(c.rank==="unranked") save.unlocked[c.id]=true;
+    persist();
+  }
+  function ensureLevels(){
+    for(const c of CARDS) if(save.unlocked[c.id] && !save.cardLevel[c.id]) save.cardLevel[c.id]=1;
+    persist();
+  }
+  function ensureDeckValid(){
+    const pool = unlockedCards().map(c=>c.id);
+    if(!pool.length) return;
+    save.deck = save.deck.filter(id => save.unlocked[id]);
+    while(save.deck.length<10) save.deck.push(pool[Math.floor(Math.random()*pool.length)]);
+    save.deck = save.deck.slice(0,10);
+    persist();
+  }
+  ensureInitialUnlocks(); ensureLevels(); ensureDeckValid();
+
+  function lvl(id){ return Math.max(1, Math.min(10, save.cardLevel[id]||1)); }
+  function mulByLevel(L){ return 1 + (L-1)*0.06; }
+  function applyLevel(base){
+    const c = JSON.parse(JSON.stringify(base));
+    const L = lvl(c.id);
+    const m = mulByLevel(L);
+    c.level=L;
+    if(c.kind==="unit"){
+      if(c.hp) c.hp=Math.round(c.hp*m);
+      if(c.dmg) c.dmg=Math.round(c.dmg*m);
+      if(c.shield) c.shield=Math.round(c.shield*m);
+      if(c.auraHeal) c.auraHeal=Math.round(c.auraHeal*m);
+    } else {
+      if(c.dmg) c.dmg=Math.round(c.dmg*m);
+      if(c.heal) c.heal=Math.round(c.heal*m);
+      if(c.shieldAllies) c.shieldAllies=Math.round(c.shieldAllies*m);
+      if(c.dot) c.dot=Math.round(c.dot*m);
+    }
+    return c;
+  }
+
+  // ===== UI =====
+  const els = {
+    rankName: document.getElementById("rankName"),
+    rankPct: document.getElementById("rankPct"),
+    unlockedCount: document.getElementById("unlockedCount"),
+    totalCards: document.getElementById("totalCards"),
+    gold: document.getElementById("gold"),
+    streak: document.getElementById("streak"),
+    bestStreak: document.getElementById("bestStreak"),
+    timeLeft: document.getElementById("timeLeft"),
+    btnHome: document.getElementById("btnHome"),
+    btnChests: document.getElementById("btnChests"),
+    btnUpgrades: document.getElementById("btnUpgrades"),
+    hand: document.getElementById("hand"),
+    manaNow: document.getElementById("manaNow"),
+    manaMax: document.getElementById("manaMax"),
+    manaBar: document.getElementById("manaBar"),
+    emanaNow: document.getElementById("emanaNow"),
+    emanaMax: document.getElementById("emanaMax"),
+    emanaBar: document.getElementById("emanaBar"),
+    overlay: document.getElementById("overlay"),
+    modal: document.getElementById("modal"),
+    canvas: document.getElementById("canvas"),
+  };
+  function rarityClass(rank){ return "r-"+rank; }
+  
+  function updateManaUI(){
+    if(!els.manaNow || !window.GAME) return;
+    const p = Math.max(0, Math.min(1, GAME.pMana / GAME.pManaMax));
+    const a = Math.max(0, Math.min(1, GAME.aMana / GAME.aManaMax));
+    els.manaNow.textContent = GAME.pMana.toFixed(1);
+    els.manaMax.textContent = GAME.pManaMax.toFixed(0);
+    els.emanaNow.textContent = GAME.aMana.toFixed(1);
+    els.emanaMax.textContent = GAME.aManaMax.toFixed(0);
+    if(els.manaBar) els.manaBar.style.width = (p*100).toFixed(1)+"%";
+    if(els.emanaBar) els.emanaBar.style.width = (a*100).toFixed(1)+"%";
+  }
+
+function updateTopbar(){
+    const rk=currentRank();
+    els.rankName.textContent = rk.name;
+    els.rankPct.textContent = save.rankPct.toFixed(1);
+    els.unlockedCount.textContent = unlockedCards().length;
+    els.totalCards.textContent = CARDS.length;
+    els.gold.textContent = save.gold;
+    els.streak.textContent = save.streak;
+    els.bestStreak.textContent = save.bestStreak;
+  }
+  function showModal(title, bodyHtml, buttonsHtml=""){
+    els.modal.innerHTML = `
+      <div class="head">
+        <h2>${title}</h2>
+        <div class="row">${buttonsHtml}</div>
+      </div>
+      <div class="body">${bodyHtml}</div>
+    `;
+    els.overlay.style.display = "flex";
+  }
+  function hideModal(){ els.overlay.style.display="none"; }
+  els.overlay.addEventListener("click", (e)=>{ if(e.target===els.overlay) hideModal(); });
+
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m])); }
+
+  // ===== Procedural portraits =====
+  function hash32(str){ let h=2166136261; for(let i=0;i<str.length;i++) h=Math.imul(h ^ str.charCodeAt(i),16777619); return h>>>0; }
+  function portraitEmoji(card){
+    const h=hash32(card.id);
+    if(card.kind==="spell"){
+      if(card.heal) return "✨";
+      if(card.freeze) return "⏱️";
+      if(card.slow) return "❄️";
+      if(card.dot) return "🔥";
+      if(card.pull) return "🕳️";
+      if(card.jumps) return "⚡";
+      if(card.summon) return "👹";
+      if(card.shieldAllies) return "🛡️";
+      if(card.silence) return "🔇";
+      return "📜";
+    }
+    const faces=["😈","🧙","🧝","🛡️","🏹","🐉","🗡️","👑","🦂","🦇","🦁","🦊","🐺"];
+    return faces[(h>>>20)%faces.length];
+  }
+
+  function describeCard(c){
+    if(c.kind==="unit"){
+      const ex=[];
+      if(c.shield) ex.push(`Shield ${c.shield}`);
+      if(c.revive) ex.push("Revive");
+      if(c.auraHeal) ex.push(`Aura +${c.auraHeal}/s`);
+      if(c.multiShot) ex.push(`Multi ${c.multiShot}`);
+      if(c.bonusVs==="tank") ex.push(`Vs Tanks x${c.bonusMul}`);
+      if(c.curse) ex.push(`Curse +${Math.round(c.curse*100)}%`);
+      const r = (c.range||0) >= 80 ? "Ranged" : "Melee";
+      return `${r} · HP ${c.hp} · DMG ${c.dmg} · ATK ${c.atkSpd}s · SPD ${c.spd}${ex.length ? " · "+ex.join(" · ") : ""}`;
+    } else {
+      const parts=[];
+      if(c.dmg) parts.push(`DMG ${c.dmg}`);
+      if(c.heal) parts.push(`HEAL ${c.heal}`);
+      if(c.radius) parts.push(`R ${c.radius}`);
+      if(c.dot) parts.push(`DoT ${c.dot}/s`);
+      if(c.freeze) parts.push("Freeze");
+      if(c.slow) parts.push("Slow");
+      if(c.pull) parts.push("Pull");
+      if(c.jumps) parts.push(`Jumps ${c.jumps}`);
+      if(c.summon) parts.push(`Summon x${c.count||1}`);
+      if(c.shieldAllies) parts.push(`Shield ${c.shieldAllies}`);
+      if(c.silence) parts.push(`Silence ${c.silence}s`);
+      return parts.join(" · ");
+    }
+  }
+
+  // ===== Chests =====
+  function aiAllowedRanksSet(){
+    const allowed=new Set();
+    for(let i=0;i<=save.rankIndex;i++) allowed.add(RANKS[i].id);
+    return allowed;
+  }
+  function unlockChanceMultiplier(){
+    const m = 1.25 - save.rankIndex*0.08;
+    return Math.max(0.45, Math.min(1.35, m));
+  }
+  function unlockAttemptsByRank(){
+    if(save.rankIndex <= 3) return 2; // Unranked->Gold
+    if(save.rankIndex <= 5) return 1; // Platinum/Diamond
+    return 1;
+  }
+  function chestRarityForWin(){
+    const i=save.rankIndex;
+    const roll=Math.random();
+    const epicChance=Math.min(0.18, 0.05+i*0.010);
+    const legChance =Math.min(0.05, 0.008+i*0.0035);
+    const rareChance=Math.min(0.34, 0.16+i*0.013);
+    if(roll < legChance) return "legendary";
+    if(roll < legChance+epicChance) return "epic";
+    if(roll < legChance+epicChance+rareChance) return "rare";
+    return "common";
+  }
+  function chestRewards(rarity){
+    const i=save.rankIndex;
+    const baseCoins={common:70,rare:150,epic:280,legendary:480}[rarity] + i*14;
+    const coins=Math.round(baseCoins*(0.90+Math.random()*0.25));
+    const levelUps={common:1,rare:2,epic:3,legendary:5}[rarity];
+    const unlockRoll={common:0.55,rare:0.72,epic:0.86,legendary:0.96}[rarity]*unlockChanceMultiplier();
+    return {coins, levelUps, unlockRoll: Math.max(0.05, Math.min(0.98, unlockRoll))};
+  }
+  function giveChestAfterWin(){
+    const r=chestRarityForWin();
+    save.chests[r]+=1;
+    persist();
+    return r;
+  }
+  function openChest(rarity){
+    if(save.chests[rarity] <= 0) return null;
+    save.chests[rarity]-=1;
+    save.stats.chestsOpened += 1;
+
+    const rw=chestRewards(rarity);
+    save.gold += rw.coins;
+
+    const results=[{type:"gold", amount: rw.coins}];
+
+    const allow=aiAllowedRanksSet();
+    const lockedPool = CARDS.filter(c => allow.has(c.rank) && !save.unlocked[c.id]);
+    const attempts = unlockAttemptsByRank();
+    for(let a=0;a<attempts;a++) {
+      if(!lockedPool.length) break;
+      if(Math.random() < rw.unlockRoll) {
+        const pick = lockedPool[Math.floor(Math.random()*lockedPool.length)];
+        if(!save.unlocked[pick.id]) {
+          save.unlocked[pick.id]=true;
+          save.cardLevel[pick.id]=1;
+          results.push({type:"unlock", cardId: pick.id});
+        }
+      }
+    }
+
+    const u=unlockedCards();
+    for(let k=0;k<rw.levelUps;k++) {
+      if(!u.length) break;
+      const pick=u[Math.floor(Math.random()*u.length)];
+      const cur=lvl(pick.id);
+      if(cur<10) {
+        save.cardLevel[pick.id]=cur+1;
+        results.push({type:"level", cardId: pick.id, newLevel: cur+1});
+      }
+    }
+
+    persist(); ensureDeckValid(); ensureLevels(); updateTopbar();
+    return results;
+  }
+
+  // ===== Upgrades =====
+  function upgradeCost(cardId){
+    const c=getCard(cardId);
+    const rMul = 1 + rankIndexOf(c.rank)*0.22;
+    const L=lvl(cardId);
+    return Math.round((80 + L*60 + (L*L)*24)*rMul);
+  }
+  function upgradeCard(cardId){
+    if(!save.unlocked[cardId]) return false;
+    const L=lvl(cardId);
+    if(L>=10) return false;
+    const cost=upgradeCost(cardId);
+    if(save.gold<cost) return false;
+    save.gold-=cost;
+    save.cardLevel[cardId]=L+1;
+    persist(); updateTopbar();
+    return true;
+  }
+
+  // ===== Deck builder (player) =====
+  function deckCount(id){ return save.deck.filter(x=>x===id).length; }
+  function renderDeckBuilder(){
+    ensureDeckValid(); ensureLevels();
+    let query=""; let showLocked=false;
+    const render=()=>{
+      const pool = CARDS
+        .filter(c => showLocked ? true : !!save.unlocked[c.id])
+        .filter(c => !query || c.name.toLowerCase().includes(query.toLowerCase()))
+        .sort((a,b)=> (rankIndexOf(a.rank)-rankIndexOf(b.rank)) || (a.cost-b.cost) || a.name.localeCompare(b.name));
+
+      const deckHtml = save.deck.map((id, idx)=> {
+        const base=getCard(id); const c=applyLevel(base);
+        return `<div class="item">
+          <div class="left">
+            <div class="title">${idx+1}. <span class="chip">${portraitEmoji(base)}</span> ${c.name} <span class="chip ok">Lv ${c.level}</span></div>
+            <div class="desc">${describeCard(c)}</div>
+          </div>
+          <div class="row"><span class="chip">🔮 ${c.cost}</span><div class="btn secondary" data-rm="${idx}" style="min-height:34px;padding:8px 10px;">Remove</div></div>
+        </div>`;
+      }).join("");
+
+      const listHtml = pool.slice(0, 260).map(base=>{
+        const unlocked=!!save.unlocked[base.id];
+        const c = unlocked ? applyLevel(base) : base;
+        const canAdd = unlocked && save.deck.length<10 && deckCount(base.id)<2;
+        return `<div class="item">
+          <div class="left">
+            <div class="title"><span class="chip">${portraitEmoji(base)}</span> <span class="${rarityClass(c.rank)}">${c.name}</span>
+              <span class="chip">${c.kind.toUpperCase()}</span> <span class="chip ${unlocked?"ok":"lock"}">${unlocked ? ("Lv "+lvl(c.id)) : "Locked"}</span></div>
+            <div class="desc">${describeCard(c)}</div>
+          </div>
+          <div class="row"><span class="chip">🔮 ${c.cost}</span><div class="btn ${canAdd ? "" : "secondary"}" data-add="${c.id}" style="min-height:34px;padding:8px 10px;">Add</div></div>
+        </div>`;
+      }).join("");
+
+      showModal("Deck Builder", `
+        <p>10 cards. Max 2 duplicates.</p>
+        <div class="row"><span class="pill warn">Gold: <b>${save.gold}</b></span><span class="pill">Deck: <b>${save.deck.length}/10</b></span></div>
+        <div style="margin:10px 0" class="row">
+          <input class="search" id="q" placeholder="Search..." value="${escapeHtml(query)}" />
+          <div class="btn secondary" id="toggleLocked" style="min-height:40px">${showLocked ? "Hide Locked" : "Show Locked"}</div>
+        </div>
+        <div class="grid2">
+          <div><div class="small" style="margin:6px 0 8px">Your Deck</div><div class="list">${deckHtml}</div></div>
+          <div><div class="small" style="margin:6px 0 8px">Library</div><div class="list">${listHtml}</div></div>
+        </div>
+      `, `<div class="btn secondary" id="close">Close</div>`);
+      document.getElementById("close").onclick = hideModal;
+      bindTap(document.getElementById("toggleLocked"), ()=>{ showLocked=!showLocked; render(); };
+      document.getElementById("q").oninput = (e)=>{ query=e.target.value; render(); };
+      els.modal.querySelectorAll("[data-add]").forEach(btn => btn.onclick = () => {
+        const id=btn.getAttribute("data-add");
+        if(!save.unlocked[id]) return;
+        if(save.deck.length>=10) return;
+        if(deckCount(id)>=2) return;
+        save.deck.push(id); persist(); render();
+      });
+      els.modal.querySelectorAll("[data-rm]").forEach(btn => btn.onclick = () => {
+        const idx=Number(btn.getAttribute("data-rm"));
+        save.deck.splice(idx,1); persist(); render();
+      });
+    };
+    render();
+  }
+
+  // ===== Practice setup =====
+  function normalizePracticeDeck(){
+    const allowIds = CARDS.filter(c=>aiAllowedRanksSet().has(c.rank)).map(c=>c.id);
+    save.practice.deck = (save.practice.deck||[]).filter(id=>allowIds.includes(id));
+    while(save.practice.deck.length<10 && allowIds.length) save.practice.deck.push(allowIds[Math.floor(Math.random()*allowIds.length)]);
+    save.practice.deck = save.practice.deck.slice(0,10);
+    persist();
+  }
+  function renderPracticeSetup(){
+    normalizePracticeDeck();
+    const rk=currentRank();
+    const allowed=aiAllowedRanksSet();
+    const pool=CARDS.filter(c=>allowed.has(c.rank)).sort((a,b)=>(a.cost-b.cost)||a.name.localeCompare(b.name));
+    let query="";
+    const render=()=>{
+      const deck=save.practice.deck||[];
+      const deckHtml = deck.map((id,idx)=>{
+        const c=getCard(id);
+        return `<div class="item">
+          <div class="left"><div class="title">${idx+1}. <span class="chip">${portraitEmoji(c)}</span> ${c.name}</div><div class="desc">${describeCard(c)}</div></div>
+          <div class="row"><span class="chip">🔮 ${c.cost}</span><div class="btn secondary" data-prm="${idx}" style="min-height:34px;padding:8px 10px;">Remove</div></div>
+        </div>`;
+      }).join("");
+      const listHtml = pool.filter(c=>!query||c.name.toLowerCase().includes(query.toLowerCase())).slice(0,240).map(c=>{
+        const canAdd = (save.practice.mode==="custom") && deck.length<10 && deck.filter(x=>x===c.id).length<2;
+        return `<div class="item">
+          <div class="left"><div class="title"><span class="chip">${portraitEmoji(c)}</span> <span class="${rarityClass(c.rank)}">${c.name}</span> <span class="chip">${c.kind.toUpperCase()}</span></div>
+          <div class="desc">${describeCard(c)}</div></div>
+          <div class="row"><span class="chip">🔮 ${c.cost}</span><div class="btn ${canAdd? "" : "secondary"}" data-padd="${c.id}" style="min-height:34px;padding:8px 10px;">Add</div></div>
+        </div>`;
+      }).join("");
+
+      showModal("Practice Setup", `
+        <p>Practice gives <b>no</b> rank %, gold, chests, or stats changes.</p>
+        <div class="row"><span class="pill">Your Rank: <b class="${rarityClass(rk.id)}">${rk.name}</b></span><span class="pill">Rank %: <b>${save.rankPct.toFixed(1)}%</b></span></div>
+        <div class="row" style="margin-top:10px">
+          <div class="btn ${save.practice.mode==="meta" ? "" : "secondary"}" id="pmMeta" style="min-height:40px">Meta Bot</div>
+          <div class="btn ${save.practice.mode==="custom" ? "" : "secondary"}" id="pmCustom" style="min-height:40px">Custom Bot Deck</div>
+        </div>
+        ${save.practice.mode==="meta" ? `
+          <div class="row" style="margin-top:10px">
+            <span class="chip">Choose meta:</span>
+            <div class="btn secondary" data-meta="Balanced" style="min-height:38px">Balanced</div>
+            <div class="btn secondary" data-meta="Aggro" style="min-height:38px">Aggro</div>
+            <div class="btn secondary" data-meta="Control" style="min-height:38px">Control</div>
+            <div class="btn secondary" data-meta="Tank" style="min-height:38px">Tank</div>
+            <div class="btn secondary" data-meta="Swarm" style="min-height:38px">Swarm</div>
+          </div>
+          <p class="small">Selected: <b>${save.practice.meta||"Balanced"}</b></p>
+        ` : `
+          <div class="grid2" style="margin-top:10px">
+            <div><div class="small" style="margin:6px 0 8px">Bot Deck</div><div class="list">${deckHtml}</div></div>
+            <div><div class="small" style="margin:6px 0 8px">Allowed Cards</div>
+              <input class="search" id="pq" placeholder="Search cards..." value="${escapeHtml(query)}" />
+              <div class="list" style="margin-top:8px">${listHtml}</div>
+            </div>
+          </div>
+        `}
+        <div class="grid3" style="margin-top:12px">
+          <div class="btn" id="pStart">Start Practice</div>
+          <div class="btn secondary" id="pClose">Close</div>
+          <div class="btn secondary" id="pDeck">Your Deck</div>
+        </div>
+      `, ``);
+
+      document.getElementById("pClose").onclick=hideModal;
+      document.getElementById("pDeck").onclick=()=>renderDeckBuilder();
+      bindTap(document.getElementById("pStart"), ()=>{ hideModal(); startMatch("practice"); };
+
+      bindTap(document.getElementById("pmMeta"), ()=>{ save.practice.mode="meta"; persist(); render(); };
+      bindTap(document.getElementById("pmCustom"), ()=>{ save.practice.mode="custom"; persist(); render(); };
+      els.modal.querySelectorAll("[data-meta]").forEach(b=> b.onclick=()=>{ save.practice.meta=b.getAttribute("data-meta"); persist(); render(); });
+      const pq=document.getElementById("pq"); if(pq) pq.oninput=(e)=>{ query=e.target.value; render(); };
+      els.modal.querySelectorAll("[data-padd]").forEach(b=> b.onclick=()=>{
+        if(save.practice.mode!=="custom") return;
+        if(deck.length>=10) return;
+        const id=b.getAttribute("data-padd");
+        if(deck.filter(x=>x===id).length>=2) return;
+        deck.push(id); save.practice.deck=deck; persist(); render();
+      });
+      els.modal.querySelectorAll("[data-prm]").forEach(b=> b.onclick=()=>{
+        const idx=Number(b.getAttribute("data-prm"));
+        deck.splice(idx,1); save.practice.deck=deck; normalizePracticeDeck(); render();
+      });
+    };
+    render();
+  }
+
+  // ===== Home =====
+  function renderHome(){
+    updateTopbar();
+    const rk=currentRank();
+    showModal("CrushLite — Fantasy Arena", `
+      <p>Build a deck, open chests, upgrade cards, and climb the ladder. <b>Rank is % based</b>.</p>
+      <div class="row">
+        <span class="pill">Rank: <b class="${rarityClass(rk.id)}">${rk.name}</b></span>
+        <span class="pill">Rank %: <b>${save.rankPct.toFixed(1)}%</b></span>
+        <span class="pill warn">Gold: <b>${save.gold}</b></span>
+        <span class="pill good">Wins: <b>${save.stats.totalWins}</b></span>
+        <span class="pill bad">Losses: <b>${save.stats.totalLosses}</b></span>
+        <span class="pill">Best streak: <b>${save.bestStreak}</b></span>
+      </div>
+      <div class="grid3" style="margin-top:12px">
+        <div class="btn" id="btnPlay">Play Ranked</div>
+        <div class="btn secondary" id="btnPractice">Practice</div>
+        <div class="btn secondary" id="btnDeck">Deck Builder</div>
+        <div class="btn secondary" id="btnCh">Chests</div>
+        <div class="btn secondary" id="btnUp">Upgrades</div>
+        <div class="btn secondary" id="btnReset">Reset Save</div>
+      </div>
+      <p class="small" style="margin-top:10px">Bronze/Silver losses are ~1%. Higher ranks lose more %. Secret is gated and extremely hard.</p>
+    `, `<div class="btn secondary" id="close">Close</div>`);
+    document.getElementById("close").onclick=hideModal;
+    bindTap(document.getElementById("btnPlay"), ()=>{ hideModal(); startMatch("ranked"); };
+    bindTap(document.getElementById("btnPractice"), ()=>{ renderPracticeSetup(); };
+    bindTap(document.getElementById("btnDeck"), ()=>{ renderDeckBuilder(); };
+    bindTap(document.getElementById("btnCh"), ()=>{ renderChests(); };
+    bindTap(document.getElementById("btnUp"), ()=>{ renderUpgrades(); };
+    bindTap(document.getElementById("btnReset"), ()=>{
+      localStorage.removeItem(SAVE_KEY);
+      save = defaultSave();
+      ensureInitialUnlocks(); ensureLevels(); ensureDeckValid();
+      updateTopbar();
+      hideModal();
+      renderHome();
+    };
+  }
+
+  // ===== Chests modal =====
+  function renderChests(){
+    showModal("Chests", `
+      <p>Open chests for <b>gold</b>, <b>new unlocks</b>, and <b>random level-ups</b>.</p>
+      <div class="row">
+        <span class="pill warn">Gold: <b>${save.gold}</b></span>
+        <span class="pill">Common: <b>${save.chests.common}</b></span>
+        <span class="pill">Rare: <b>${save.chests.rare}</b></span>
+        <span class="pill">Epic: <b>${save.chests.epic}</b></span>
+        <span class="pill">Legendary: <b>${save.chests.legendary}</b></span>
+      </div>
+      <div class="grid2" style="margin-top:10px">
+        <div class="btn secondary" id="openCommon">Open Common</div>
+        <div class="btn secondary" id="openRare">Open Rare</div>
+        <div class="btn secondary" id="openEpic">Open Epic</div>
+        <div class="btn secondary" id="openLegendary">Open Legendary</div>
+      </div>
+      <div class="list" id="chestLog" style="margin-top:10px"></div>
+    `, `<div class="btn secondary" id="close">Close</div>`);
+    document.getElementById("close").onclick=hideModal;
+    const log=document.getElementById("chestLog");
+    const openAndLog=(rarity)=>{
+      const res=openChest(rarity);
+      updateTopbar();
+      if(!res){
+        log.innerHTML = `<div class="item"><div class="left"><div class="title">No ${rarity} chests.</div><div class="desc">Win ranked matches to earn more.</div></div></div>` + log.innerHTML;
+        return;
+      }
+      const lines=res.map(r=> r.type==="gold" ? `🪙 +${r.amount} gold` :
+                               r.type==="unlock" ? `🃏 UNLOCK: ${getCard(r.cardId).name}` :
+                               `⬆️ Level up: ${getCard(r.cardId).name} → Lv ${r.newLevel}`);
+      log.innerHTML = `<div class="item"><div class="left"><div class="title">${rarity.toUpperCase()} chest opened</div><div class="desc">${lines.join("<br>")}</div></div></div>` + log.innerHTML;
+    };
+    document.getElementById("openCommon").onclick=()=>openAndLog("common");
+    document.getElementById("openRare").onclick=()=>openAndLog("rare");
+    document.getElementById("openEpic").onclick=()=>openAndLog("epic");
+    document.getElementById("openLegendary").onclick=()=>openAndLog("legendary");
+  }
+
+  // ===== Upgrades modal =====
+  function renderUpgrades(){
+    let query=""; let showLocked=false;
+    const render=()=>{
+      const pool = CARDS
+        .filter(c => showLocked ? true : !!save.unlocked[c.id])
+        .filter(c => !query || c.name.toLowerCase().includes(query.toLowerCase()))
+        .sort((a,b)=>(rankIndexOf(a.rank)-rankIndexOf(b.rank)) || (lvl(b.id)-lvl(a.id)) || a.name.localeCompare(b.name));
+
+      const rows = pool.slice(0,260).map(c=>{
+        const unlocked=!!save.unlocked[c.id];
+        const L=unlocked?lvl(c.id):0;
+        const cost=unlocked?upgradeCost(c.id):0;
+        const ok=unlocked && L<10 && save.gold>=cost;
+        return `<div class="item">
+          <div class="left">
+            <div class="title"><span class="chip">${portraitEmoji(c)}</span> <span class="${rarityClass(c.rank)}">${c.name}</span>
+              <span class="chip ${unlocked?"ok":"lock"}">${unlocked?("Lv "+L+"/10"):"Locked"}</span></div>
+            <div class="desc">${unlocked?describeCard(applyLevel(c)):describeCard(c)}</div>
+          </div>
+          <div class="row">${unlocked?`<span class="chip">Upgrade: 🪙 ${cost}</span><div class="btn ${ok?"":"secondary"}" data-up="${c.id}" style="min-height:34px;padding:8px 10px;">Upgrade</div>`:`<span class="chip lock">Unlock via chests</span>`}</div>
+        </div>`;
+      }).join("");
+
+      showModal("Upgrades", `
+        <p>Spend gold to upgrade specific cards (max Lv10).</p>
+        <div class="row"><span class="pill warn">Gold: <b>${save.gold}</b></span><span class="pill">Unlocked: <b>${unlockedCards().length}</b> / ${CARDS.length}</span></div>
+        <div style="margin:10px 0" class="row">
+          <input class="search" id="q" placeholder="Search cards..." value="${escapeHtml(query)}" />
+          <div class="btn secondary" id="toggleLocked" style="min-height:40px">${showLocked?"Hide Locked":"Show Locked"}</div>
+        </div>
+        <div class="list" id="upList">${rows}</div>
+      `, `<div class="btn secondary" id="close">Close</div>`);
+      document.getElementById("close").onclick=hideModal;
+      bindTap(document.getElementById("toggleLocked"), ()=>{ showLocked=!showLocked; render(); };
+      document.getElementById("q").oninput=(e)=>{ query=e.target.value; render(); };
+      els.modal.querySelectorAll("[data-up]").forEach(btn=> btn.onclick=()=>{
+        const id=btn.getAttribute("data-up");
+        if(upgradeCard(id)) render();
+      });
+    };
+    render();
+  }
+
+  // ===== GAME CORE =====
+  const ctx = els.canvas.getContext("2d");
+  const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+
+  const GAME = {
+    running:false,
+    mode:"ranked",
+    lanes:3,
+    w:0,h:0,
+    pCastle:{hp:1400,max:1400},
+    aCastle:{hp:1400,max:1400},
+    tMax:300, tLeft:300,
+    pMana:3, pManaMax:10, pManaRegen:1.0,
+    aMana:3, aManaMax:10, aManaRegen:1.0,
+    pDeck:[], aDeck:[],
+    pHand:[], aHand:[],
+    selectedHandIndex:-1,
+    units:[], effects:[],
+    ai:{thinkCd:0, cadence:0.33, personality:"Balanced", deckName:"Meta Balanced"}
+  };
+
+  function resize(){
+    const rect = els.canvas.getBoundingClientRect();
+    GAME.w = Math.floor(rect.width*DPR);
+    GAME.h = Math.floor(rect.height*DPR);
+    els.canvas.width = GAME.w;
+    els.canvas.height = GAME.h;
+  }
+  window.addEventListener("resize", resize);
+
+  function fmtTime(sec){ sec=Math.max(0,Math.floor(sec)); const m=Math.floor(sec/60); const s=sec%60; return `${m}:${String(s).padStart(2,"0")}`; }
+  function now(){ return performance.now()/1000; }
+  function dist2(x1,y1,x2,y2){ const dx=x1-x2, dy=y1-y2; return dx*dx+dy*dy; }
+
+  const BOT_NAMES=["Vex","Eldra","Rook","Nyx","Kairo","Mira","Thorn","Lux","Sable","Orin"];
+  function cardPower(base){
+    if(base.kind==="unit"){
+      let p=(base.hp||0)+(base.dmg||0)*14;
+      if(base.shield) p+=base.shield*0.8;
+      if(base.revive) p+=320;
+      if(base.multiShot) p+=base.multiShot*180;
+      if(base.auraHeal) p+=base.auraHeal*60;
+      if(base.bonusVs==="tank") p+=150;
+      if(base.curse) p+=base.curse*900;
+      p*= (1+rankIndexOf(base.rank)*0.06);
+      return p/Math.max(2,base.cost);
+    } else {
+      let p=(base.dmg||0)*2.0 + (base.heal||0)*1.8 + (base.dot||0)*8.5;
+      if(base.freeze) p+=base.freeze*220;
+      if(base.slow) p+=160;
+      if(base.pull) p+=210;
+      if(base.jumps) p+=(base.jumps||0)*120;
+      if(base.summon) p+=190;
+      if(base.shieldAllies) p+=base.shieldAllies*1.2;
+      if(base.silence) p+=(base.silence||0)*160;
+      p*= (1+rankIndexOf(base.rank)*0.06);
+      return p/Math.max(2,base.cost);
+    }
+  }
+
+  function botPoolByRank(){ const allow=aiAllowedRanksSet(); return CARDS.filter(c=>allow.has(c.rank)); }
+
+  function buildMetaBotDeck(forcedPersonality){
+    const pool=botPoolByRank();
+    const personalities=[
+      {name:"Aggro", deckName:"Meta Aggro", wantUnits:7, wantSpells:3, prefer:["assassin","bruiser","swarm"]},
+      {name:"Control", deckName:"Meta Control", wantUnits:5, wantSpells:5, prefer:["control","ranged"]},
+      {name:"Tank", deckName:"Meta Tank", wantUnits:7, wantSpells:3, prefer:["tank","tankish","antiTank"]},
+      {name:"Swarm", deckName:"Meta Swarm", wantUnits:8, wantSpells:2, prefer:["swarm","assassin"]},
+      {name:"Balanced", deckName:"Meta Balanced", wantUnits:6, wantSpells:4, prefer:["ranged","bruiser","tankish"]},
+    ];
+    const p = forcedPersonality ? (personalities.find(x=>x.name===forcedPersonality) || personalities[Math.floor(Math.random()*personalities.length)]) : personalities[Math.floor(Math.random()*personalities.length)];
+    const name = BOT_NAMES[Math.floor(Math.random()*BOT_NAMES.length)];
+
+    const scored = pool.map(c=>{
+      let s = cardPower(c);
+      const arch = (c.kind==="spell") ? "control" : (c.archetype||"bruiser");
+      if(p.prefer.includes(arch)) s*=1.18;
+      s*= (0.92+Math.random()*0.18);
+      return {id:c.id, card:c, score:s};
+    });
+    const units=scored.filter(x=>x.card.kind==="unit").sort((a,b)=>b.score-a.score);
+    const spells=scored.filter(x=>x.card.kind==="spell").sort((a,b)=>b.score-a.score);
+    const deck=[];
+    const addFrom=(list)=>{ for(const x of list){ if(deck.length>=10) return; if(deck.includes(x.id)) continue; deck.push(x.id); return; } };
+    for(let i=0;i<p.wantUnits && deck.length<10;i++) addFrom(units);
+    for(let i=0;i<p.wantSpells && deck.length<10;i++) addFrom(spells);
+    const swing=spells.find(x=>(x.card.freeze||0)>=2 || (x.card.dmg||0)>=250 || x.card.pull);
+    if(swing && !deck.includes(swing.id)){ const idx=deck.findIndex(id=>(getCard(id)||{}).kind==="spell"); if(idx>=0) deck[idx]=swing.id; else deck[deck.length-1]=swing.id; }
+    const all=scored.sort((a,b)=>b.score-a.score);
+    while(deck.length<10) addFrom(all);
+    return {name, personality:p.name, deckName:p.deckName, deck};
+  }
+
+  function buildPracticeBotDeck(){
+    if(save.practice.mode==="custom" && Array.isArray(save.practice.deck) && save.practice.deck.length===10) return {name:"Practice Bot", personality:"Custom", deckName:"Custom Deck", deck:[...save.practice.deck]};
+    return buildMetaBotDeck(save.practice.meta||"Balanced");
+  }
+
+  function drawCard(deck, hand){ const id=deck.shift(); deck.push(id); hand.push(id); }
+  function buildStartingHand(deck){ const hand=[]; for(let i=0;i<5;i++) drawCard(deck,hand); return hand; }
+
+  function startMatch(mode){
+    mode = mode || "ranked";
+    resize();
+    ensureDeckValid(); ensureLevels();
+    GAME.mode = mode;
+    GAME.running=true;
+    GAME.tLeft=GAME.tMax;
+    GAME.pCastle={hp:1400,max:1400};
+    GAME.aCastle={hp:1400,max:1400};
+    GAME.pMana=3; GAME.aMana=3;
+    GAME.units=[]; GAME.effects=[];
+    GAME.selectedHandIndex=-1;
+
+    GAME.pDeck=[...save.deck];
+    const bot = (mode==="practice") ? buildPracticeBotDeck() : buildMetaBotDeck();
+    GAME.aDeck=[...bot.deck];
+    GAME.ai.personality=bot.personality;
+    GAME.ai.deckName=bot.deckName;
+    save.lastBot={name:bot.name, personality:bot.personality, deckName:bot.deckName};
+    persist();
+
+    GAME.pHand=buildStartingHand([...GAME.pDeck]);
+    GAME.aHand=buildStartingHand([...GAME.aDeck]);
+    GAME.ai.cadence=Math.max(0.18, 0.34 - save.rankIndex*0.018);
+    GAME.ai.thinkCd=0;
+
+    renderHand();
+    updateManaUI();
+    updateTopbar();
+  }
+
+  // Input
+  function laneFromY(yPx){ const laneH=GAME.h/GAME.lanes; return Math.max(0, Math.min(GAME.lanes-1, Math.floor(yPx/laneH))); }
+  function onTap(clientX, clientY){
+    if(!GAME.running) return;
+    const rect = els.canvas.getBoundingClientRect();
+    const x=(clientX-rect.left)*DPR;
+    const y=(clientY-rect.top)*DPR;
+    const lane=laneFromY(y);
+
+    if(GAME.selectedHandIndex<0) return;
+
+    const id=GAME.pHand[GAME.selectedHandIndex];
+    const base=getCard(id);
+    const card=applyLevel(base);
+    if(GAME.pMana < card.cost) return;
+
+    GAME.pMana -= card.cost;
+    playCard("p", card, lane);
+
+    GAME.pHand.splice(GAME.selectedHandIndex,1);
+    drawCard(GAME.pDeck, GAME.pHand);
+    GAME.selectedHandIndex=-1;
+    renderHand();
+  }
+  els.canvas.addEventListener("click",(e)=>onTap(e.clientX,e.clientY),{passive:true});
+  els.canvas.addEventListener("touchstart",(e)=>{ const t=e.changedTouches[0]; if(t) onTap(t.clientX,t.clientY); },{passive:true});
+
+  // Units + spells
+  function playCard(side, card, lane){ if(card.kind==="unit") spawnUnit(side,lane,card); else castSpell(side,lane,card); }
+
+  function spawnUnit(side,lane,card){
+    const laneH=GAME.h/GAME.lanes;
+    const y=lane*laneH+laneH/2;
+    const x=(side==='p')?70*DPR:(GAME.w-70*DPR);
+    GAME.units.push({
+      side,lane,x,y,
+      cardId: card.id,
+      maxHp:card.hp, hp:card.hp,
+      shield:card.shield||0,
+      dmg:card.dmg,
+      atkSpd:card.atkSpd||0.9,
+      atkCd:0,
+      spd:(card.spd||40)*DPR,
+      range:(card.range||18)*DPR,
+      isRanged:(card.range||0)>=80,
+      revive:!!card.revive, revived:false,
+      multiShot:card.multiShot||1,
+      curse:card.curse||0,
+      auraHeal:card.auraHeal||0,
+      bonusVs:card.bonusVs||null,
+      bonusMul:card.bonusMul||1.0,
+      slowMul:1.0
+    });
+  }
+
+  function castSpell(side,lane,spell){
+    const midX=GAME.w/2;
+    const laneH=GAME.h/GAME.lanes;
+    const y=lane*laneH+laneH/2;
+    const rad=(spell.radius||90)*DPR;
+
+    const enemies=GAME.units.filter(u=>u.lane===lane && u.side!==side);
+    const allies=GAME.units.filter(u=>u.lane===lane && u.side===side);
+
+    if(spell.summon){
+      const count=spell.count||1;
+      for(let i=0;i<count;i++) spawnUnit(side,lane, {
+        id: spell.id+"_summon_"+i,
+        name:(spell.summon.name||"Imp"),
+        hp:spell.summon.hp, dmg:spell.summon.dmg,
+        atkSpd:spell.summon.atkSpd||0.85,
+        spd:spell.summon.spd||60,
+        range:spell.summon.range||16,
+        archetype:spell.summon.archetype||"swarm",
+        shield:0
+      });
+    }
+
+    if(spell.shieldAllies) for(const a of allies) if(dist2(a.x,a.y,midX,y)<=rad*rad) a.shield=(a.shield||0)+spell.shieldAllies;
+    if(spell.heal) for(const a of allies) if(dist2(a.x,a.y,midX,y)<=rad*rad) a.hp=Math.min(a.maxHp,a.hp+spell.heal);
+
+    if(spell.jumps){
+      let pool=[...enemies]; let fromX=midX, fromY=y; let jumps=spell.jumps;
+      while(jumps>0 && pool.length){
+        pool.sort((a,b)=>dist2(a.x,a.y,fromX,fromY)-dist2(b.x,b.y,fromX,fromY));
+        const t=pool.shift();
+        dealDamage(t, spell.dmg||0);
+        fromX=t.x; fromY=t.y; jumps--;
+      }
+      return;
+    }
+
+    for(const u of enemies){
+      if(dist2(u.x,u.y,midX,y)>rad*rad) continue;
+      if(spell.dmg) dealDamage(u, spell.dmg);
+      if(spell.stun) u.stunUntil=now()+spell.stun;
+      if(spell.slow) { u.slowMul=Math.max(0.30,1.0-spell.slow); u.slowUntil=now()+(spell.slowDur||2.5); }
+      if(spell.freeze) u.freezeUntil=now()+spell.freeze;
+      if(spell.pull) u.pull={x:midX,y:y,mul:spell.pull,until:now()+0.7};
+      if(spell.dot) u.dot={dps:spell.dot,until:now()+(spell.dotDur||3.0)};
+      if(spell.silence) u.silenceUntil=now()+spell.silence;
+    }
+  }
+
+  function dealDamage(u, amount){
+    let dmg=amount;
+    if(u.dmgTakenMul) dmg*=u.dmgTakenMul;
+    if(u.shield && u.shield>0){ const s=Math.min(u.shield,dmg); u.shield-=s; dmg-=s; }
+    u.hp-=dmg;
+  }
+
+  function updateUnits(dt){
+    for(const u of GAME.units) if(u.auraHeal){
+      const allies=GAME.units.filter(v=>v.side===u.side && v.lane===u.lane);
+      for(const a of allies){ if(a===u) continue; if(Math.abs(a.x-u.x)<=120*DPR) a.hp=Math.min(a.maxHp,a.hp+u.auraHeal*dt); }
+    }
+
+    for(const u of GAME.units){
+      if(u.dot && now()<u.dot.until) u.hp -= (u.dot.dps*dt);
+      if(u.slowUntil && now()>u.slowUntil){u.slowMul=1.0; u.slowUntil=0;}
+      const slowMul=u.slowMul||1.0;
+      const silenced=(u.silenceUntil && now()<u.silenceUntil);
+
+      if(u.freezeUntil && now()<u.freezeUntil) continue;
+      if(u.stunUntil && now()<u.stunUntil) continue;
+
+      if(u.pull && now()<u.pull.until){ u.x += (u.pull.x-u.x)*(u.pull.mul*dt); u.y += (u.pull.y-u.y)*(u.pull.mul*dt); }
+
+      const dir=(u.side==='p')?1:-1;
+      const targets=GAME.units.filter(v=>v.lane===u.lane && v.side!==u.side);
+      let target=null, bestD=Infinity;
+      for(const t of targets){ const d=Math.abs(t.x-u.x); if(d<bestD){bestD=d; target=t;} }
+      const castleX=(u.side==='p')?(GAME.w-90*DPR):(90*DPR);
+      const distToCastle=Math.abs(castleX-u.x);
+
+      u.atkCd -= dt;
+      const atkSpeedMul = silenced ? 1.45 : 1.0;
+
+      if(target && bestD<=u.range){
+        if(u.atkCd<=0){
+          u.atkCd = u.atkSpd*atkSpeedMul;
+          const close=targets.sort((a,b)=>Math.abs(a.x-u.x)-Math.abs(b.x-u.x)).slice(0,u.multiShot);
+          for(const t of close){
+            let d=u.dmg;
+            if(u.bonusVs==="tank" && t.maxHp>=520) d*=u.bonusMul;
+            if(u.curse){ t.dmgTakenMul=1.0+u.curse; t.curseUntil=now()+2.6; }
+            dealDamage(t,d);
+          }
+        }
+      } else if(distToCastle<=u.range){
+        if(u.atkCd<=0){
+          u.atkCd = u.atkSpd*atkSpeedMul;
+          if(u.side==='p') GAME.aCastle.hp -= u.dmg;
+          else GAME.pCastle.hp -= u.dmg;
+        }
+      } else {
+        u.x += (u.spd*slowMul*dt)*dir;
+      }
+
+      if(u.curseUntil && now()>u.curseUntil){u.dmgTakenMul=1.0; u.curseUntil=0;}
+    }
+
+    for(let i=GAME.units.length-1;i>=0;i--) {
+      const u=GAME.units[i];
+      if(u.hp<=0){
+        if(u.revive && !u.revived){ u.revived=true; u.hp=u.maxHp*0.4; }
+        else GAME.units.splice(i,1);
+      }
+    }
+  }
+
+  // AI
+  function aiThink(dt){
+    GAME.ai.thinkCd -= dt;
+    if(GAME.ai.thinkCd>0) return;
+    GAME.ai.thinkCd = GAME.ai.cadence;
+
+    const smarts=Math.min(1.0,0.28+save.rankIndex*0.08);
+    const playable=GAME.aHand.map((id,idx)=>({id,idx,card:getCard(id)})).filter(o=>o.card && o.card.cost<=GAME.aMana);
+    if(!playable.length) return;
+
+    const laneScores=[];
+    for(let lane=0; lane<GAME.lanes; lane++){
+      const enemies=GAME.units.filter(u=>u.lane===lane && u.side==='p');
+      const allies=GAME.units.filter(u=>u.lane===lane && u.side==='a');
+      const enemyPower=enemies.reduce((s,u)=>s+(u.hp/70+u.dmg*0.9),0);
+      const allyPower=allies.reduce((s,u)=>s+(u.hp/70+u.dmg*0.9),0);
+      const closeThreat=enemies.reduce((m,u)=>Math.max(m,u.x/GAME.w),0);
+      laneScores.push({lane, enemyPower, allyPower, closeThreat, enemies: enemies.length});
+    }
+    laneScores.sort((a,b)=>(b.closeThreat*10+b.enemyPower)-(a.closeThreat*10+a.enemyPower));
+    const defendLane=laneScores[0].lane;
+    laneScores.sort((a,b)=>((b.allyPower-b.enemyPower)-(a.allyPower-a.enemyPower)));
+    const attackLane=laneScores[0].lane;
+    const underThreat = laneScores.find(x=>x.lane===defendLane).closeThreat > (0.60 - smarts*0.10);
+    const lane = underThreat ? defendLane : attackLane;
+
+    const spellOptions=playable.filter(o=>o.card.kind==="spell");
+    const unitOptions=playable.filter(o=>o.card.kind==="unit");
+
+    const preferSpells = (GAME.ai.personality==="Control") ? 0.66 : (GAME.ai.personality==="Balanced" ? 0.45 : 0.25);
+    let choice=null;
+
+    if(spellOptions.length && (Math.random()<preferSpells) && (laneScores.find(x=>x.lane===lane).enemies >= (smarts>0.7?2:3) || underThreat)) {
+      spellOptions.sort((a,b)=>spellScore(b.card,lane,smarts)-spellScore(a.card,lane,smarts));
+      choice = spellOptions[0];
+    }
+    if(!choice){
+      unitOptions.sort((a,b)=>unitScore(b.card,lane,smarts)-unitScore(a.card,lane,smarts));
+      choice = unitOptions[0] || spellOptions[0];
+    }
+    if(!choice) return;
+
+    GAME.aMana -= choice.card.cost;
+    playCard("a", choice.card, lane);
+    GAME.aHand.splice(choice.idx,1);
+    drawCard(GAME.aDeck, GAME.aHand);
+  }
+  function spellScore(sp,lane,smarts){
+    const enemies=GAME.units.filter(u=>u.lane===lane && u.side==='p');
+    const allies=GAME.units.filter(u=>u.lane===lane && u.side==='a');
+    let v=0;
+    if(sp.dmg) v+=sp.dmg*0.20+enemies.length*14;
+    if(sp.pull) v+=42+enemies.length*12;
+    if(sp.freeze) v+=36+enemies.length*10;
+    if(sp.slow) v+=22+enemies.length*8;
+    if(sp.heal) v += allies.reduce((s,u)=>s+(u.maxHp-u.hp),0)*0.10;
+    if(sp.dot) v+=18+enemies.length*6;
+    if(sp.jumps) v+=28+enemies.length*9;
+    if(sp.summon) v+=24;
+    if(sp.shieldAllies) v+=16;
+    if(sp.silence) v+=20;
+    v*= (0.85+smarts*0.35);
+    return v;
+  }
+  function unitScore(c,lane,smarts){
+    const enemies=GAME.units.filter(u=>u.lane===lane && u.side==='p');
+    const enemyRanged=enemies.filter(u=>u.isRanged).length;
+    let v=c.hp*0.05 + c.dmg*0.9 - c.cost*5;
+    if((c.range||0)>=80 && (enemies.length-enemyRanged)>enemyRanged) v+=18;
+    if((c.archetype||"")==="assassin" && enemyRanged>=1) v+=22;
+    if(c.bonusVs==="tank" && enemies.some(u=>u.maxHp>=520)) v+=24;
+    v += rankIndexOf(c.rank)*(smarts*2.0);
+    v *= (0.9+Math.random()*0.2);
+    return v;
+  }
+
+  // Render
+  function roundRect(x,y,w,h,r,fill,stroke){
+    const rr=Math.min(r,w/2,h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr,y);
+    ctx.arcTo(x+w,y,x+w,y+h,rr);
+    ctx.arcTo(x+w,y+h,x,y+h,rr);
+    ctx.arcTo(x,y+h,x,y,rr);
+    ctx.arcTo(x,y,x+w,y,rr);
+    ctx.closePath();
+    if(fill) ctx.fill();
+    if(stroke) ctx.stroke();
+  }
+  function drawCastle(x,y,castle,isPlayerLeft){
+    const bw=62*DPR, bh=130*DPR;
+    ctx.save(); ctx.translate(x,y);
+    ctx.fillStyle=isPlayerLeft?"rgba(88,255,155,0.11)":"rgba(255,92,122,0.11)";
+    ctx.strokeStyle=isPlayerLeft?"rgba(88,255,155,0.38)":"rgba(255,92,122,0.38)";
+    ctx.lineWidth=2*DPR;
+    roundRect(-bw/2,-bh/2,bw,bh,12*DPR,true,true);
+    const barW=92*DPR, barH=10*DPR;
+    const p=Math.max(0,Math.min(1,castle.hp/castle.max));
+    ctx.fillStyle="rgba(255,255,255,0.10)"; roundRect(-barW/2,-bh/2-20*DPR,barW,barH,999*DPR,true,false);
+    ctx.fillStyle=isPlayerLeft?"rgba(88,255,155,0.88)":"rgba(255,92,122,0.88)"; roundRect(-barW/2,-bh/2-20*DPR,barW*p,barH,999*DPR,true,false);
+    ctx.fillStyle="rgba(236,242,255,0.92)";
+    ctx.font=`${14*DPR}px system-ui`; ctx.textAlign="center";
+    ctx.fillText(Math.max(0,Math.floor(castle.hp)),0,-bh/2-28*DPR);
+    ctx.restore();
+  }
+  function drawUnit(u){
+    const isP=u.side==='p';
+    const baseR = (u.maxHp>=900)?22*DPR:(u.maxHp>=600?18*DPR:14*DPR);
+    ctx.fillStyle=isP?"rgba(88,255,155,0.18)":"rgba(255,92,122,0.18)";
+    ctx.beginPath(); ctx.arc(u.x,u.y,baseR+10*DPR,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="rgba(0,0,0,0.20)";
+    ctx.strokeStyle=isP?"rgba(88,255,155,0.70)":"rgba(255,92,122,0.70)";
+    ctx.lineWidth=2*DPR;
+    ctx.beginPath(); ctx.arc(u.x,u.y,baseR,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    if(u.shield>0){ ctx.strokeStyle="rgba(122,168,255,0.70)"; ctx.beginPath(); ctx.arc(u.x,u.y,baseR+5*DPR,0,Math.PI*2); ctx.stroke(); }
+    const barW=48*DPR, barH=6.5*DPR;
+    const yy=u.y-baseR-15*DPR;
+    ctx.fillStyle="rgba(255,255,255,0.10)"; roundRect(u.x-barW/2,yy,barW,barH,999*DPR,true,false);
+    const p=Math.max(0,Math.min(1,u.hp/u.maxHp));
+    ctx.fillStyle=isP?"rgba(88,255,155,0.90)":"rgba(255,92,122,0.90)"; roundRect(u.x-barW/2,yy,barW*p,barH,999*DPR,true,false);
+  }
+
+  function draw(){
+    const w=GAME.w,h=GAME.h;
+    ctx.clearRect(0,0,w,h);
+    const laneH=h/GAME.lanes;
+    for(let i=0;i<GAME.lanes;i++){ const y=i*laneH; ctx.fillStyle=(i%2===0)?"rgba(255,255,255,0.030)":"rgba(255,255,255,0.020)"; ctx.fillRect(0,y,w,laneH); ctx.strokeStyle="rgba(255,255,255,0.10)"; ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+    ctx.strokeStyle="rgba(255,255,255,0.12)"; ctx.setLineDash([7*DPR,7*DPR]); ctx.beginPath(); ctx.moveTo(w/2,0); ctx.lineTo(w/2,h); ctx.stroke(); ctx.setLineDash([]);
+    drawCastle(90*DPR,h/2,GAME.pCastle,true);
+    drawCastle(w-90*DPR,h/2,GAME.aCastle,false);
+    for(const u of GAME.units) drawUnit(u);
+
+    // HUD mode label
+    ctx.fillStyle="rgba(236,242,255,0.62)";
+    ctx.font=`${11*DPR}px system-ui`;
+    ctx.textAlign="left";
+    ctx.fillText(GAME.mode==="practice" ? "Practice (no rewards)" : "Ranked", 14*DPR, 56*DPR);
+  }
+
+  function renderHand(){
+    els.hand.innerHTML="";
+    for(let i=0;i<GAME.pHand.length;i++){
+      const base=getCard(GAME.pHand[i]);
+      const c=applyLevel(base);
+      const canPlay = GAME.pMana >= c.cost;
+      const div=document.createElement("div");
+      div.className="card"+(i===GAME.selectedHandIndex?" sel":"")+(!canPlay?" disabled":"");
+      div.innerHTML = `
+        <div class="row1">
+          <div style="display:flex;gap:8px;align-items:flex-start;">
+            <div class="portrait">${portraitEmoji(base)}</div>
+            <div>
+              <div class="name">${c.name}</div>
+              <div class="sub"><span class="${rarityClass(c.rank)}">${rankById(c.rank).name}</span> · ${c.kind.toUpperCase()}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <div class="badge lvl">Lv ${c.level}</div>
+            <div class="badge mana">🔮 ${c.cost}</div>
+          </div>
+        </div>
+        <div class="sub" style="margin-top:8px">${describeCard(c)}</div>
+      `;
+      div.addEventListener("click", ()=>{ if(!GAME.running) return; GAME.selectedHandIndex=(GAME.selectedHandIndex===i)?-1:i; renderHand(); });
+      els.hand.appendChild(div);
+    }
+  }
+
+  function endMatch(){
+    if(!GAME.running) return;
+    GAME.running=false;
+    const win = (GAME.aCastle.hp<=0) || (GAME.pCastle.hp>GAME.aCastle.hp && GAME.tLeft<=0);
+
+    if(GAME.mode==="practice"){
+      showModal(win ? "Practice Win ✅" : "Practice Loss ❌", `
+        <p>No rewards or penalties in practice.</p>
+        <div class="grid3" style="margin-top:10px">
+          <div class="btn" id="pAgain">Practice Again</div>
+          <div class="btn secondary" id="pSetup">Practice Setup</div>
+          <div class="btn secondary" id="pHome">Home</div>
+        </div>
+      `, ``);
+      bindTap(document.getElementById("pAgain"), ()=>{ hideModal(); startMatch("practice"); };
+      bindTap(document.getElementById("pSetup"), ()=>{ renderPracticeSetup(); };
+      bindTap(document.getElementById("pHome"), ()=>{ hideModal(); renderHome(); };
+      return;
+    }
+
+    if(win){
+      const prevRankIndex = save.rankIndex;
+      save.stats.totalWins += 1;
+      save.streak += 1;
+      save.bestStreak = Math.max(save.bestStreak, save.streak);
+
+      // gain %
+      save.rankPct += rankGainPct(currentRank().id);
+
+      const chest = giveChestAfterWin();
+
+      // promote if >=100%
+      while(save.rankPct >= 100 && save.rankIndex < RANKS.length-1){
+        const before = save.rankIndex;
+        save.rankIndex += 1;
+        save.rankPct -= 100;
+        // Secret gate
+        if(currentRank().id==="secret"){
+          const ok = (save.mythicWins >= SECRET_GATE.mythicWins) && (save.stats.totalWins >= SECRET_GATE.totalWins) && (save.streak >= SECRET_GATE.streak);
+          if(!ok){ save.rankIndex = before; save.rankPct = 99.0; break; }
+        }
+      }
+      if(currentRank().id==="mythic") save.mythicWins += 1;
+      save.rankPct = Math.max(0, Math.min(99.9, save.rankPct));
+
+      persist(); ensureLevels(); ensureDeckValid(); updateTopbar();
+
+      showModal("Victory! 🏆", `
+        <p>You earned a <b>${chest}</b> chest.</p>
+        <div class="row">
+          <span class="pill good">WIN</span>
+          <span class="pill">Rank: <b class="${rarityClass(currentRank().id)}">${currentRank().name}</b></span>
+          <span class="pill">Rank %: <b>${save.rankPct.toFixed(1)}%</b></span>
+          <span class="pill">Streak: <b>${save.streak}</b> (Best <b>${save.bestStreak}</b>)</span>
+        </div>
+        <div class="grid3" style="margin-top:10px">
+          <div class="btn" id="vRematch">Next Match</div>
+          <div class="btn secondary" id="vCh">Chests</div>
+          <div class="btn secondary" id="vHome">Home</div>
+        </div>
+      `, ``);
+      bindTap(document.getElementById("vRematch"), ()=>{ hideModal(); startMatch("ranked"); };
+      bindTap(document.getElementById("vCh"), ()=>{ renderChests(); };
+      bindTap(document.getElementById("vHome"), ()=>{ hideModal(); renderHome(); };
+    } else {
+      save.stats.totalLosses += 1;
+      save.streak = 0;
+
+      if(save.rankIndex >= 1){ // Bronze+
+        save.rankPct -= rankLossPct(currentRank().id);
+        while(save.rankPct < 0 && save.rankIndex > 0){ save.rankIndex -= 1; save.rankPct += 100; }
+        save.rankPct = Math.max(0, Math.min(99.9, save.rankPct));
+      }
+
+      persist(); updateTopbar();
+
+      showModal("Defeat 💀", `
+        <p>Ranked loss: -${rankLossPct(currentRank().id)}% (higher ranks lose more).</p>
+        <div class="row">
+          <span class="pill bad">LOSS</span>
+          <span class="pill">Rank: <b class="${rarityClass(currentRank().id)}">${currentRank().name}</b></span>
+          <span class="pill">Rank %: <b>${save.rankPct.toFixed(1)}%</b></span>
+          <span class="pill">Best streak: <b>${save.bestStreak}</b></span>
+        </div>
+        <div class="grid3" style="margin-top:10px">
+          <div class="btn" id="dRematch">Try Again</div>
+          <div class="btn secondary" id="dDeck">Deck</div>
+          <div class="btn secondary" id="dHome">Home</div>
+        </div>
+      `, ``);
+      bindTap(document.getElementById("dRematch"), ()=>{ hideModal(); startMatch("ranked"); };
+      bindTap(document.getElementById("dDeck"), ()=>{ renderDeckBuilder(); };
+      bindTap(document.getElementById("dHome"), ()=>{ hideModal(); renderHome(); };
+    }
+  }
+
+  // Loop
+  let last=performance.now();
+  function tick(ts){
+    const dt=Math.min(0.033,(ts-last)/1000);
+    last=ts;
+
+    if(GAME.running){
+      GAME.tLeft -= dt;
+      els.timeLeft.textContent = fmtTime(GAME.tLeft);
+      GAME.pMana = Math.min(GAME.pManaMax, GAME.pMana + GAME.pManaRegen*dt);
+      GAME.aMana = Math.min(GAME.aManaMax, GAME.aMana + GAME.aManaRegen*dt);
+      updateManaUI();
+
+      aiThink(dt);
+      updateUnits(dt);
+
+      if(GAME.pCastle.hp<=0 || GAME.aCastle.hp<=0 || GAME.tLeft<=0) endMatch();
+      if((ts|0)%120===0) renderHand();
+    }
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  // Buttons
+  bindTap(els.btnHome, ()=>renderHome());
+  bindTap(els.btnChests, ()=>renderChests());
+  bindTap(els.btnUpgrades, ()=>renderUpgrades());
+  updateTopbar();
+  resize();
+  renderHome();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
